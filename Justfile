@@ -529,6 +529,16 @@ vm-ssh *cmd:
 test image="localhost/pugpal:latest":
     tests/check-image.sh {{ image }}
 
+# Copy files into the running test VM: just vm-push DEST SRC...
+[group('PugPal')]
+vm-push dest +src:
+    @scp -q -i local/vm-ssh/id_ed25519 -P 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR {{ src }} pug@127.0.0.1:{{ quote(dest) }}
+
+# Copy a file out of the running test VM: just vm-pull SRC DEST
+[group('PugPal')]
+vm-pull src dest:
+    @scp -q -i local/vm-ssh/id_ed25519 -P 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR pug@127.0.0.1:{{ quote(src) }} {{ quote(dest) }}
+
 # Throw away the VM's changes (keeps the downloaded disk)
 [group('PugPal')]
 vm-reset:
