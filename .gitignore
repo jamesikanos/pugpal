@@ -19,3 +19,5 @@ local/
 *.iso
 *.raw
 vm/
+# Separate private git repo for the theme/dotfiles (pugpal-dotfiles).
+dotfiles/
