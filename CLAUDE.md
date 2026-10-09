@@ -250,6 +250,14 @@ PugPal is a personal project, not a FieldPal product.
 
 Dated entries, newest first. What broke, why, what fixed it.
 
+- **2026-10-09** - The first Flatpak installed on a fresh system (Spotify, in
+  the VM) didn't appear in the DMS launcher until DMS restarted; the second
+  (Flatseal) appeared instantly. DMS watches the XDG app dirs that exist at
+  startup, and `/var/lib/flatpak/exports/share/applications` only appears with
+  the first install. Fixed with tmpfiles (system + user) creating the dirs at
+  boot. Also: system Flatpak installs over SSH fail silently without a polkit
+  prompt - use sudo or a graphical terminal.
+
 - **2026-10-09** - **First VM boot passed** (KVM, virgl on the RX 9070 XT):
   Hyprland session up, groups service worked, `docker run hello-world` without
   sudo, 1Password GIDs 921-923 correct, all PugPal units active. Known
