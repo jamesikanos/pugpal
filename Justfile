@@ -458,3 +458,68 @@ format:
     fi
     # Run shfmt on all Bash scripts
     find . -iname "*.sh" -type f -exec shfmt --write "{}" ';'
+
+# ---------------------------------------------------------------------------
+# PugPal recipes. All run as the normal user: no sudo, nothing installed on
+# the host. See CLAUDE.md "Hard rule: the dev PC is hands-off".
+# ---------------------------------------------------------------------------
+
+# Download just, cosign and gitleaks into .tools/ (gitignored)
+[group('PugPal')]
+tools:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p .tools/dl
+    cd .tools/dl
+    gh release download -R casey/just -p 'just-*-x86_64-unknown-linux-musl.tar.gz' --clobber
+    gh release download -R sigstore/cosign -p 'cosign-linux-amd64' --clobber
+    gh release download -R gitleaks/gitleaks -p 'gitleaks_*_linux_x64.tar.gz' --clobber
+    tar -xzf just-*.tar.gz -C .. just
+    tar -xzf gitleaks_*.tar.gz -C .. gitleaks
+    install -m755 cosign-linux-amd64 ../cosign
+    cd .. && rm -rf dl
+    git config core.hooksPath .githooks
+
+# Download the newest CI-built test qcow2 into output/qcow2/
+[group('PugPal')]
+fetch-disk:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    run=$(gh run list -w build-disk.yml -s success -L 1 --json databaseId -q '.[0].databaseId')
+    [[ -n "$run" ]] || { echo "no successful build-disk run yet" >&2; exit 1; }
+    rm -rf output/qcow2 && mkdir -p output
+    gh run download "$run" -D output/_dl
+    find output/_dl -name 'disk.qcow2' -exec install -D -m644 {} output/qcow2/disk.qcow2 \;
+    rm -rf output/_dl
+    ls -lh output/qcow2/disk.qcow2
+
+# Boot the test VM (user QEMU, GL display, SSH on localhost:2222)
+[group('PugPal')]
+vm:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    base=output/qcow2/disk.qcow2
+    [[ -f "$base" ]] || { echo "no $base - run: just fetch-disk" >&2; exit 1; }
+    # Writes go to an overlay so the downloaded disk stays pristine.
+    mkdir -p vm
+    [[ -f vm/overlay.qcow2 ]] || qemu-img create -q -f qcow2 -b "$PWD/$base" -F qcow2 vm/overlay.qcow2
+    if [[ -w /dev/kvm ]]; then
+        accel=(-enable-kvm -cpu host)
+    else
+        echo "WARNING: no /dev/kvm (SVM off in BIOS?) - software emulation, very slow" >&2
+        accel=(-accel tcg -cpu max)
+    fi
+    exec qemu-system-x86_64 "${accel[@]}" -machine q35 -smp 4 -m 8G \
+        -device virtio-vga-gl -display gtk,gl=on \
+        -drive file=vm/overlay.qcow2,if=virtio,format=qcow2 \
+        -nic user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:2222-:22
+
+# SSH into the running test VM as the throwaway pug user
+[group('PugPal')]
+vm-ssh *cmd:
+    ssh -i local/vm-ssh/id_ed25519 -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR pug@127.0.0.1 {{ cmd }}
+
+# Throw away the VM's changes (keeps the downloaded disk)
+[group('PugPal')]
+vm-reset:
+    rm -rf vm/
