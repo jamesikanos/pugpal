@@ -90,7 +90,12 @@ jobs:
           ref="${IMAGE_REGISTRY}/${IMAGE_NAME}:${DEFAULT_TAG}"
           mkdir -p output
           sudo podman pull "$ref"
+          # apparmor=unconfined: on the ubuntu-26.04 runners osbuild's mount of
+          # the container storage fails with "permission denied" even with
+          # --privileged (same error with bootc-image-builder and image-builder).
           sudo podman run --privileged --rm \
+            --security-opt apparmor=unconfined \
+            --security-opt label=type:unconfined_t \
             -v "${PWD}/output:/output" \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
             -v "${PWD}/disk_config/disk.toml:/blueprint.toml:ro" \
