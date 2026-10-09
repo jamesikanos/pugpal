@@ -27,7 +27,7 @@ in the gitignored `local/machine.md`.
 | Hyprland pinned to `0.56*` | Hyprland changes config format/semantics between minors (0.56 already generates `~/.config/hypr/hyprland.lua` - the Lua config is here, not upcoming). Bump only after the user config is checked against the new version. |
 | Lutris as an **RPM**, not Flatpak | The Flatpak keeps data under `~/.var/app`; the RPM keeps the existing `~/.config/lutris`, `~/.local/share/lutris/runners` (GE-Proton) and the WoW prefix in `~/Games` working untouched. |
 | Steam from negativo17 `fedora-steam` | The base ships negativo17 multimedia and **no RPM Fusion** (the template's comment claiming otherwise is stale). One vendor, no codec-stack mixing. |
-| Docker CE, not podman-docker | Existing compose workflows expect the real daemon. Podman is still there. |
+| Docker CE, not podman-docker | **Required** - James's devbox workflow. Existing compose workflows expect the real daemon; Podman is still there. Enabled at boot, wheel users auto-added to `docker`. |
 | Immutable `/opt` (`rm /opt && mkdir /opt`) | Fedora atomic symlinks `/opt -> /var/opt`; files an RPM writes there at build time are lost on deploy. Chrome and 1Password install to `/opt`. Side effect: `/opt` is read-only at runtime - put user-installed stuff in `~/.local` or `/usr/local` (= `/var/usrlocal`, writable). |
 
 ## Layout
@@ -171,8 +171,10 @@ gamemode, MangoHud and gamescope. Addon tooling is documented in
    `/etc/systemd/system`, `/usr/local/bin`, NetworkManager connections,
    `rpm -qa` and `flatpak list`. (Fan curves from `/etc/coolercontrol` are
    already in pugpal-dotfiles `machine/main-pc/`.)
-   **Docker lives on the root disk** (`/var/lib/docker`) and a reinstall
-   wipes it. On James's devbox that's fine - **Docker data is disposable**
+   **Docker DATA lives on the root disk** (`/var/lib/docker`) and a reinstall
+   wipes it. (Docker itself is REQUIRED and ships in the image - docker-ce,
+   compose, buildx, enabled, user in the docker group automatically; only the
+   old images/cache/volumes are lost.) On James's devbox that's fine - **Docker data is disposable**
    (James, 2026-10-09: nothing permanent runs there; everything can be
    rebuilt). No volume migration needed.
 2. **Identify disks by UUID, never by name**: NVMe names (`nvme0n1`/`nvme1n1`)
