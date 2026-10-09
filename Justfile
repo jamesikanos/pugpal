@@ -489,7 +489,7 @@ fetch-disk:
     [[ -n "$run" ]] || { echo "no successful build-disk run yet" >&2; exit 1; }
     rm -rf output/qcow2 && mkdir -p output
     gh run download "$run" -D output/_dl
-    find output/_dl -name 'disk.qcow2' -exec install -D -m644 {} output/qcow2/disk.qcow2 \;
+    find output/_dl -name '*.qcow2' -exec install -D -m644 {} output/qcow2/disk.qcow2 \;
     rm -rf output/_dl
     ls -lh output/qcow2/disk.qcow2
 
