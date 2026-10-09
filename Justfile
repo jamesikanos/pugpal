@@ -550,6 +550,18 @@ audit-packages image="localhost/pugpal:latest":
     comm -23 local/audit/host-userinstalled.txt local/audit/image.txt | tee local/audit/missing.txt
     echo "$(wc -l < local/audit/missing.txt) packages on this machine are not in {{ image }}" >&2
 
+# Config files in /etc that no package owns = hand-made changes the migration would lose (read-only)
+[group('PugPal')]
+audit-etc:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p local/audit
+    find /etc -xdev -type f -readable 2>/dev/null \
+      | xargs rpm -qf 2>/dev/null | sed -nE 's/^file (.*) is not owned by any package$/\1/p' \
+      | grep -vE '/etc/systemd/system.control/|\.(rpmnew|rpmsave|bak|lock|cache)$|/etc/(passwd|group|shadow|gshadow|subuid|subgid|hostname|localtime|resolv.conf|fstab|machine-id|machine-info|locale.conf|vconsole.conf|\.pwd.lock|\.updated)|/etc/(nvme|sysconfig)/' \
+      | sort | tee local/audit/etc-unowned.txt
+    echo "$(wc -l < local/audit/etc-unowned.txt) unowned files in /etc (root-only dirs not readable without sudo)" >&2
+
 # Throw away the VM's changes (keeps the downloaded disk)
 [group('PugPal')]
 vm-reset:

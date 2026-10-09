@@ -165,8 +165,10 @@ gamemode, MangoHud and gamescope. Addon tooling is documented in
 
 ## Migration runbook (generic; specifics in `local/machine.md`)
 
-0. Run `just audit-packages` against the current image; anything missing
-   goes into the image, the dotfiles' flatpaks.txt, or is consciously skipped.
+0. Run `just audit-packages` and `just audit-etc` against the current image;
+   anything missing goes into the image (packages, `/usr/lib/sysctl.d`, ...),
+   the dotfiles, or is consciously skipped. (2026-10-09: audit-etc found the
+   inotify limit minikube needs - it lived only in /etc/sysctl.d.)
 1. Back up from the root disk into `/home`: custom units in
    `/etc/systemd/system`, `/usr/local/bin`, NetworkManager connections,
    `rpm -qa` and `flatpak list`. (Fan curves from `/etc/coolercontrol` are
@@ -260,6 +262,11 @@ PugPal is a personal project, not a FieldPal product.
 
 Dated entries, newest first. What broke, why, what fixed it.
 
+- **2026-10-09** - **/etc audit**: the old install raised
+  `fs.inotify.max_user_instances` to 8192 in `/etc/sysctl.d` (root disk). James's
+  minikube e2e suites need it; now in `/usr/lib/sysctl.d/60-pugpal.conf`. Also
+  found a freeze-diagnosis kit (lockup-panic sysctls, systemd watchdog, kdump,
+  vitals-recorder) - see backlog.
 - **2026-10-09** - **Package audit** (`just audit-packages`: `dnf repoquery
   --userinstalled` on the old install vs the image) found 151 missing
   packages, including **zsh - James's login shell** (he couldn't have logged
