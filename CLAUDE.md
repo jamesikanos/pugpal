@@ -242,9 +242,6 @@ PugPal is a personal project, not a FieldPal product.
 - **Chrome: image vs Flatpak** - undecided. Image Chrome updates only on reboot
   but keeps 1Password desktop integration; Flatpak updates live but 1Password
   doesn't officially support sandboxed browsers. Leaning image + regular reboots.
-- **Better pug cutouts** for wallpapers: the flood-fill cutout keeps the
-  off-white studio floor (too close to Jesse's coat colour). Use an ML
-  background remover (e.g. rembg in a venv under `local/`).
 
 ## Troubleshooting log
 
@@ -257,7 +254,6 @@ Dated entries, newest first. What broke, why, what fixed it.
   the first install. Fixed with tmpfiles (system + user) creating the dirs at
   boot. Also: system Flatpak installs over SSH fail silently without a polkit
   prompt - use sudo or a graphical terminal.
-
 - **2026-10-09** - **First VM boot passed** (KVM, virgl on the RX 9070 XT):
   Hyprland session up, groups service worked, `docker run hello-world` without
   sudo, 1Password GIDs 921-923 correct, all PugPal units active. Known
