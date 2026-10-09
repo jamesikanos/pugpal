@@ -7,6 +7,14 @@
 
 set -euxo pipefail
 
+# 1Password's RPM scriptlets `groupadd` their setgid groups only if missing,
+# and a plain groupadd lands in the user range (1000+), colliding with the
+# first real user's own group. Pre-create them as system groups with the fixed
+# GIDs declared in system_files/usr/lib/sysusers.d/pugpal.conf.
+groupadd -r -g 921 onepassword
+groupadd -r -g 922 onepassword-cli
+groupadd -r -g 923 onepassword-mcp
+
 dnf5 -y install \
     google-chrome-stable \
     1password \
@@ -31,11 +39,3 @@ dnf5 -y install \
     wireguard-tools
 dnf5 -y install --setopt=tsflags=noscripts proton-vpn-daemon
 dnf5 -y install proton-vpn-gnome-desktop
-
-# 1Password's browser-integration helper is setgid "onepassword". The group was
-# created by the RPM scriptlet during this build, but on a deployed system
-# /etc/group is a three-way-merged config file and may never receive it.
-# Declare it to systemd-sysusers with the *same* GID the files were chowned to,
-# so the setgid bit keeps pointing at the right group.
-op_gid=$(getent group onepassword | cut -d: -f3)
-echo "g onepassword ${op_gid}" > /usr/lib/sysusers.d/pugpal-onepassword.conf

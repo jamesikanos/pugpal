@@ -28,9 +28,13 @@ check "/opt is not a symlink"          test ! -L /opt
 check "chrome binary"                  test -x /opt/google/chrome/chrome
 check "1Password binary"               test -x /opt/1Password/1password
 check "1Password helper is setgid"     test -g /opt/1Password/1Password-BrowserSupport
-check "onepassword sysusers GID matches helper's group" bash -c '
-    gid=$(stat -c %g /opt/1Password/1Password-BrowserSupport)
-    grep -qx "g onepassword ${gid}" /usr/lib/sysusers.d/pugpal-onepassword.conf'
+for f in /opt/1Password/1Password-BrowserSupport /usr/bin/op /opt/1Password/1password-mcp; do
+    check "$f setgid group matches sysusers GID (system range)" bash -c '
+        grp=$(stat -c %G "$1"); gid=$(stat -c %g "$1")
+        [[ $gid -lt 1000 ]] && grep -Eq "^g +${grp} +${gid}\$" /usr/lib/sysusers.d/pugpal.conf' _ "$f"
+done
+check "no package-created group in the user GID range" bash -c '
+    ! awk -F: "\$3>=1000 && \$3<60000" /etc/group | grep -q .'
 
 echo "== sessions"
 check "Hyprland wayland session"  bash -c 'ls /usr/share/wayland-sessions/ | grep -qi hyprland'

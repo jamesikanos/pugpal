@@ -99,10 +99,15 @@ bootc status
    `/usr/lib/group` (read via nss-altfiles); `usermod -aG` edits `/etc/group` and
    fails for them. `pugpal-groups.service` copies the `docker`/`libvirt` lines
    into `/etc/group` and adds wheel users, every boot, idempotently.
-3. **1Password's setgid helper** is owned by group `onepassword`. `/etc/group` is
-   three-way-merged on upgrades and may never receive the group, so `40-apps.sh`
-   writes a sysusers.d entry **with the exact build-time GID**. A different GID
-   would silently break browser integration.
+3. **Setgid groups (1Password) and sysusers.** 1Password ships three setgid
+   binaries (`1Password-BrowserSupport`, `/usr/bin/op`, `1password-mcp`) whose
+   scriptlets run a plain `groupadd` - which allocated GIDs **1000-1002**, the
+   user range, colliding with the real user's own group (GID 1000). `40-apps.sh`
+   now pre-creates them as system groups with **fixed GIDs 921/922/923**, and
+   `system_files/usr/lib/sysusers.d/pugpal.conf` declares the same GIDs (plus
+   `docker`) so deployed systems recreate them even though `/etc/group` is
+   three-way-merged on upgrade. Never change those numbers on an installed
+   system. `bootc container lint` flags any new group missing from sysusers.d.
 4. **No dnf at runtime.** All repos are removed in `90-cleanup.sh`. The system
    updates by pulling new images. For one-offs: Distrobox, or (sparingly)
    `rpm-ostree install`.
