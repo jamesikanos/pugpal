@@ -8,8 +8,21 @@
 
 set -euxo pipefail
 
+# Lutris without weak deps: its Recommends pull in system Wine (~3 GB), which
+# the old install never had - WoW runs on a GE-Proton runner from
+# ~/.local/share/lutris/runners. The recommends the old install *did* have are
+# listed explicitly below.
+dnf5 -y install --setopt=install_weak_deps=False lutris
 dnf5 -y install \
-    lutris \
+    cabextract \
+    fluid-soundfont-gs \
+    libFAudio libFAudio.i686 \
+    libXScrnSaver.i686 \
+    mesa-libGL.i686 \
+    pipewire.i686 \
+    xrandr
+
+dnf5 -y install \
     gamescope \
     gamemode gamemode.i686 \
     mangohud mangohud.i686 \
