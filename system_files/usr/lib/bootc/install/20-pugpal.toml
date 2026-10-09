@@ -1,0 +1,5 @@
+# Default root filesystem for `bootc install` and bootc-image-builder (the CI
+# test qcow2, and the external test SSD). Without it, image builder fails with
+# "missing required info: DefaultRootFs". btrfs matches Fedora Silverblue.
+[install.filesystem.root]
+type = "btrfs"

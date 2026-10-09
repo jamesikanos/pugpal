@@ -46,6 +46,7 @@ for u in docker.service coolercontrold.service libvirtd.socket vitals-recorder.t
 done
 
 echo "== no build-time repos left behind"
+check "bootc install has a default root fs" grep -q "type = \"btrfs\"" /usr/lib/bootc/install/20-pugpal.toml
 check "no third-party repo files" bash -c '! ls /etc/yum.repos.d/ | grep -Ei "docker|vscode|chrome|1password|proton|steam|copr.*(hyprland|protonplus|coolercontrol|scrcpy)"'
 
 exit $fail
