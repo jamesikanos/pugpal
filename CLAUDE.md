@@ -171,5 +171,17 @@ PugPal is a personal project, not a FieldPal product.
 
 Dated entries, newest first. What broke, why, what fixed it.
 
+- **2026-10-09** - The dev PC has **SVM disabled in the BIOS** (`SVM disabled
+  (by BIOS) in MSR_VM_CR`), so there is no `/dev/kvm`. `just vm` falls back to
+  TCG software emulation, which is far too slow for a desktop. Enabling SVM is
+  a BIOS toggle only James can make.
+- **2026-10-09** - First build failed: `proton-vpn-daemon`'s `%posttrans` runs
+  `systemctl start`, impossible in a container build, and dnf fails the whole
+  transaction. Fix: deps normally, the daemon alone with `tsflags=noscripts`,
+  enable its unit in `90-cleanup.sh`. Any other package whose scriptlets poke a
+  running systemd will need the same treatment.
+- **2026-10-09** - Lutris's weak deps pulled ~3 GB of system Wine the old
+  install never had. Lutris is now installed with weak deps off, plus an
+  explicit list of the recommends the old install did have.
 - **2026-10-09** - `base-main:44` has no GNOME/GDM and no RPM Fusion; the plan
   assumed both. Switched to `silverblue-main:44` and negativo17 Steam.
