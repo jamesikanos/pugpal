@@ -5,9 +5,9 @@
 # Test user "pug" / password "pugpal" - deliberately throwaway, VM-only. The
 # SSH key's private half is in the gitignored local/vm-ssh/.
 
-[[customizations.filesystem]]
-mountpoint = "/"
-minsize = "40 GiB"
+# No [[customizations.filesystem]]: image-builder rejects it for bootc qcow2
+# ("customizations.filesystem: not supported"). Grow the disk locally with
+# qemu-img if the VM ever needs more room.
 
 [[customizations.user]]
 name = "pug"
