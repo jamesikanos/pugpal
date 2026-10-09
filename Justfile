@@ -493,9 +493,9 @@ fetch-disk:
     rm -rf output/_dl
     ls -lh output/qcow2/disk.qcow2
 
-# Boot the test VM (user QEMU, GL display, SSH on localhost:2222)
+# Boot the test VM (user QEMU, SSH on localhost:2222). display=none boots headless for SSH-only checks
 [group('PugPal')]
-vm:
+vm display="gtk":
     #!/usr/bin/env bash
     set -euo pipefail
     base=output/qcow2/disk.qcow2
@@ -509,8 +509,13 @@ vm:
         echo "WARNING: no /dev/kvm (SVM off in BIOS?) - software emulation, very slow" >&2
         accel=(-accel tcg -cpu max)
     fi
+    if [[ "{{ display }}" == none ]]; then
+        gfx=(-device virtio-vga -display none)
+    else
+        gfx=(-device virtio-vga-gl -display gtk,gl=on)
+    fi
     exec qemu-system-x86_64 "${accel[@]}" -machine q35 -smp 4 -m 8G \
-        -device virtio-vga-gl -display gtk,gl=on \
+        "${gfx[@]}" \
         -drive file=vm/overlay.qcow2,if=virtio,format=qcow2 \
         -nic user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:2222-:22
 
