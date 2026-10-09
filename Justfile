@@ -99,6 +99,9 @@ build $target_image=image_name $tag=default_tag:
     set -euox pipefail
 
     BUILD_ARGS=()
+    # Bust the layer cache when build_files/ or system_files/ change (see Containerfile).
+    CTX_HASH=$(tar --sort=name --mtime=@0 --owner=0 --group=0 -cf - build_files system_files | sha256sum | cut -c1-16)
+    BUILD_ARGS+=("--build-arg" "CTX_HASH=${CTX_HASH}")
     LABELS=()
     if [[ -z "$(git status -s)" ]]; then
         GIT_SHA=$(git rev-parse --short HEAD)

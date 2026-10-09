@@ -28,6 +28,12 @@ FROM ghcr.io/ublue-os/silverblue-main:44
 ## make it a real directory that ships as part of the image.
 RUN rm /opt && mkdir /opt
 
+# Changes to build_files/ and system_files/ reach the build only through the
+# bind mount below, which podman's layer cache does NOT see - an edited script
+# could silently reuse the old layer. The Justfile passes a hash of both trees
+# so any change invalidates the cache from here on.
+ARG CTX_HASH=unset
+
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=bind,from=quickshell-builder,source=/out,target=/rpms/quickshell \
     --mount=type=cache,dst=/var/cache \
