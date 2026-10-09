@@ -17,6 +17,8 @@ in the gitignored `local/machine.md`.
 | `ghcr.io/ublue-os/silverblue-main:44` as base | ublue's base-main stack (codecs via negativo17, ujust, distrobox, signing policy) **plus stock GNOME/GDM**. Plain `base-main` has no desktop at all - verified by inspecting the image, not assumed. GNOME stays as the fallback session. |
 | ublue `image-template` (Containerfile + shell) | Universal Blue's recommended path. No abstraction layer over plain podman/dnf; BlueBuild was considered and rejected for that reason. |
 | Hyprland from COPR `sdegler/hyprland` | Fedora's repos have no Hyprland. sdegler's is the maintained successor to solopasha's (which stopped at F43) and builds F44/F45. |
+| Shell: **DankMaterialShell** on **Quickshell** | One QML shell (bar, launcher, notifications, lock screen, OSDs, polkit agent) themed from one palette. DMS chosen over Caelestia/end-4: official Fedora packaging, most complete, built to be themed. (Noctalia left Quickshell in 2026.) |
+| Quickshell built **from a pinned upstream commit** | James wants it bleeding-edge without waiting on a COPR. Built as our own RPM in the `quickshell-builder` stage against the image's exact Qt (it uses Qt private APIs; the daily build rebuilds it on every Qt update). Renovate proposes commit bumps. |
 | Hyprland pinned to `0.56*` | Hyprland changes config format/semantics between minors (0.56 already generates `~/.config/hypr/hyprland.lua` - the Lua config is here, not upcoming). Bump only after the user config is checked against the new version. |
 | Lutris as an **RPM**, not Flatpak | The Flatpak keeps data under `~/.var/app`; the RPM keeps the existing `~/.config/lutris`, `~/.local/share/lutris/runners` (GE-Proton) and the WoW prefix in `~/Games` working untouched. |
 | Steam from negativo17 `fedora-steam` | The base ships negativo17 multimedia and **no RPM Fusion** (the template's comment claiming otherwise is stale). One vendor, no codec-stack mixing. |
@@ -33,7 +35,9 @@ build_files/
   build.sh               overlays system_files/, runs NN-*.sh in order
   repos/*.repo           third-party repo definitions (copied in, removed at the end)
   00-repos.sh            installs repo files, enables COPRs
+  quickshell/quickshell.spec  our Quickshell RPM (pinned commit), built in the Containerfile's builder stage
   10-desktop.sh          Hyprland + Wayland tools
+  15-shell.sh            our Quickshell RPM + DankMaterialShell (avengemedia COPRs, this stage only) + brand fonts
   20-gaming.sh           Lutris, Steam, gamescope, gamemode, MangoHud, 32-bit Mesa, ProtonPlus
   30-dev.sh              Docker CE, VS Code, libvirt/QEMU, neovim, gh, adb, scrcpy
   40-apps.sh             Chrome, 1Password, CoolerControl, OBS, ProtonVPN; onepassword sysusers
@@ -41,7 +45,9 @@ build_files/
 system_files/            copied over / at build time
   usr/libexec/pugpal-groups + pugpal-groups.service   wheel users -> docker, libvirt
   usr/bin/vitals-record + vitals-recorder.{service,timer}  30s vitals log for freeze diagnosis
-disk_config/disk.toml    bootc-image-builder config for the test qcow2
+disk_config/disk.toml    image-builder blueprint for the CI test qcow2 (throwaway pug user)
+branding/                palette.toml, logo SVGs, tools/ (cutout.py, wallpaper.py - run from local/venv-branding)
+dotfiles/                gitignored: the separate PRIVATE pugpal-dotfiles repo (the look)
 .githooks/pre-commit     gitleaks secret scan (enable: git config core.hooksPath .githooks)
 .tools/                  gitignored: just, cosign, gitleaks binaries
 local/                   gitignored: machine-specific notes
@@ -162,7 +168,15 @@ gamemode, MangoHud and gamescope. Addon tooling is documented in
 5. Restore Ollama (stays in `/usr/local`, unit in `/etc/systemd/system`).
 6. Pick the Hyprland (uwsm) session in GDM.
 
-## Branding (phase 2)
+## Branding and the look
+
+The look lives in the **private** `dotfiles/` repo (gitignored here): Hyprland
+`pugpal.lua` (starts DMS, keybinds) + `pugpal-look.lua` (orange active border,
+rounding 0, no shadows/blur), the DMS custom theme `pugpal.json` (dark =
+Vinnie, light = Jesse) with `cornerRadius: 0` and IBM Plex fonts, a kitty
+theme, the pug-head launcher icon, and the wallpapers (photo for the desktop,
+duotone for the lock screen; they contain the pugs' photo, hence private).
+Keybinds: Super+Space launcher, Super+L lock, Super+Esc power menu.
 
 Pug x FieldPal. Palette from the FieldPal site tokens and the pugs themselves:
 ink `#16171a` (Vinnie is `#110a09`), Jesse's cream `#f1e4d9` ~ FieldPal
@@ -184,26 +198,12 @@ PugPal is a personal project, not a FieldPal product.
 
 ## Backlog (future work, not started)
 
-- **Quickshell as the shell layer** (instead of Waybar + mako + fuzzel +
-  hyprlock styled separately). One QML shell = bar, launcher, notifications,
-  lock screen, OSDs, all driven by `branding/palette.toml`. Plan: fork an
-  existing Quickshell shell James likes (Caelestia / Noctalia /
-  DankMaterialShell / end-4 illogical-impulse) into the private dotfiles repo
-  and restyle it; don't write one from scratch. Packaging: Fedora 44 has an old
-  snapshot (0.2.1); COPR `errornointernet/quickshell` has 0.3.2 with F44
-  builds - pin it like Hyprland. Check the chosen shell's Hyprland version
-  requirements against the 0.56 pin. The updates-behind indicator below would
-  be a Quickshell widget.
-  - **James wants it built from source** rather than relying on the COPR. Plan:
-    a multi-stage Containerfile builder stage (same `silverblue-main:44` base so
-    it compiles against the exact Qt the image ships - Quickshell uses Qt
-    private APIs and must be rebuilt on every Qt update, which our daily CI
-    does automatically), installing into a staging dir copied into the final
-    image. **Pin to a commit SHA** with Renovate opening bump PRs, so every
-    bump is revertible and smoke-tested. Optional `pugpal:edge` tag building
-    master HEAD nightly for VM-only testing. Hyprland stays on the COPR for now
-    (far more deps: aquamarine, hyprutils, hyprlang, ...).
-
+- **Renovate app**: `.github/renovate.json5` has a custom manager for the
+  Quickshell commit pin, but Renovate only runs once the Renovate GitHub app is
+  installed on the repo (James's action). Until then, bump `commit` by hand.
+- **Ship a default look for new users** (`/etc/skel`, or a `ujust pugpal-look`
+  recipe that applies the dotfiles). Today the look lives only in the private
+  dotfiles repo and is applied by hand.
 - **"Updates behind" indicator on the desktop.** James wants a visible alert
   showing how many updates the running system is behind. Ideas:
   - A Waybar custom module (plus a GNOME equivalent for the fallback session)
