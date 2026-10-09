@@ -47,12 +47,14 @@ check "Hyprland wayland session"  bash -c 'ls /usr/share/wayland-sessions/ | gre
 check "GNOME wayland session"     bash -c 'ls /usr/share/wayland-sessions/ | grep -qi gnome'
 
 echo "== services"
-for u in docker.service coolercontrold.service libvirtd.socket vitals-recorder.timer pugpal-groups.service me.proton.vpn.split_tunneling.service gdm.service; do
+for u in docker.service coolercontrold.service libvirtd.socket vitals-recorder.timer pugpal-groups.service pugpal-prune.timer me.proton.vpn.split_tunneling.service gdm.service; do
     check "$u enabled" systemctl is-enabled "$u"
 done
 
 echo "== no build-time repos left behind"
 check "flatpak exports dir created at boot (DMS launcher sees first Flatpak)" grep -q "/var/lib/flatpak/exports/share/applications" /usr/lib/tmpfiles.d/pugpal-flatpak-exports.conf
+check "pugpal-prune never prunes volumes" bash -c '! grep -E "^[^#]*(--volumes|volume prune)" /usr/libexec/pugpal-prune'
+check "ujust pugpal-clean recipe" grep -q "^pugpal-clean:" /usr/share/ublue-os/just/60-custom.just
 check "bootc install has a default root fs" grep -q "type = \"btrfs\"" /usr/lib/bootc/install/20-pugpal.toml
 check "no third-party repo files" bash -c '! ls /etc/yum.repos.d/ | grep -Ei "docker|vscode|chrome|1password|proton|steam|copr.*(hyprland|protonplus|coolercontrol|scrcpy)"'
 

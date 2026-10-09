@@ -1,0 +1,23 @@
+#!/usr/bin/bash
+# Weekly housekeeping: reclaim disk that Docker and Flatpak never give back
+# on their own. Removes only things unused for 7+ days. NEVER touches Docker
+# volumes - those are data; deleting them stays a manual decision.
+#   systemd: pugpal-prune.timer (weekly)   manual: ujust pugpal-clean
+set -uo pipefail
+age=${PUGPAL_PRUNE_AGE:-168h}
+
+if command -v docker >/dev/null && docker info >/dev/null 2>&1; then
+    echo "== docker before"; docker system df
+    # Stopped containers, unused networks, unused images (not just dangling)
+    # older than $age. No --volumes.
+    docker system prune --all --force --filter "until=${age}"
+    docker builder prune --all --force --filter "until=${age}"
+    echo "== docker after"; docker system df
+else
+    echo "docker not running - skipped"
+fi
+
+if command -v flatpak >/dev/null; then
+    echo "== flatpak: unused runtimes"
+    flatpak uninstall --system --unused --noninteractive -y || true
+fi

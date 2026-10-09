@@ -10,6 +10,7 @@ systemctl enable \
     libvirtd.socket \
     vitals-recorder.timer \
     pugpal-groups.service \
+    pugpal-prune.timer \
     me.proton.vpn.split_tunneling.service
 
 for copr in \

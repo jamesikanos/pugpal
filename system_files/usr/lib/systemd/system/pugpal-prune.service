@@ -1,0 +1,10 @@
+[Unit]
+Description=PugPal weekly cleanup (Docker cache/images, unused Flatpak runtimes; never volumes)
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/pugpal-prune
+Nice=19
+IOSchedulingClass=idle
