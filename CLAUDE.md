@@ -6,6 +6,11 @@ Built as an OCI image from this repo, signed, published to
 `ghcr.io/jamesikanos/pugpal`, and booted with bootc. Named after two pugs,
 Vinnie (black) and Jesse (fawn).
 
+**The look and personal config live in a separate PRIVATE repo:**
+[jamesikanos/pugpal-dotfiles](https://github.com/jamesikanos/pugpal-dotfiles)
+(cloned here as the gitignored `dotfiles/`). Its CLAUDE.md has the install
+steps. This repo = the OS image; that repo = the user layer on top.
+
 **This repo is public.** Nothing secret or machine-specific goes in it: no keys,
 no disk UUIDs, no device names, no network/VPN config. Machine specifics live
 in the gitignored `local/machine.md`.
@@ -161,13 +166,18 @@ gamemode, MangoHud and gamescope. Addon tooling is documented in
 
 1. Back up from the root disk into `/home`: custom units in
    `/etc/systemd/system`, `/usr/local/bin`, NetworkManager connections,
-   `rpm -qa` and `flatpak list`.
+   `rpm -qa` and `flatpak list`. (Fan curves from `/etc/coolercontrol` are
+   already in pugpal-dotfiles `machine/main-pc/`.)
 2. Install stock Fedora Silverblue 44 onto the **root disk only**; leave the
    separate `/home` disk unselected. Create the same username (UID 1000).
 3. Add the old home partition to `/etc/fstab` at `/var/home`, reboot.
 4. `sudo bootc switch ghcr.io/jamesikanos/pugpal:latest`, reboot.
-5. Restore Ollama (stays in `/usr/local`, unit in `/etc/systemd/system`).
-6. Pick the Hyprland (uwsm) session in GDM.
+5. Log into the Hyprland (uwsm) session once (Hyprland writes its default
+   `hyprland.lua`), then apply the user layer - see pugpal-dotfiles CLAUDE.md:
+   `gh repo clone jamesikanos/pugpal-dotfiles ~/pugpal-dotfiles && ~/pugpal-dotfiles/install.sh`
+6. Restore the fan curves: `~/pugpal-dotfiles/machine/main-pc/restore-coolercontrol.sh`.
+7. Restore Ollama (stays in `/usr/local`, unit in `/etc/systemd/system`).
+8. Check: PodMic RAW and PodMic Tuned both appear as inputs; BRIO mic absent.
 
 ## Branding and the look
 

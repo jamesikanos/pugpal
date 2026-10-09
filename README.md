@@ -11,6 +11,10 @@ not a FieldPal product.
 sudo bootc switch ghcr.io/jamesikanos/pugpal:latest
 ```
 
+The look and personal config (theme, wallpapers, audio, fan curves) live in
+the private [pugpal-dotfiles](https://github.com/jamesikanos/pugpal-dotfiles)
+repo, applied on top with its `install.sh`.
+
 Everything else - why it's built this way, layout, build/test commands,
 gotchas, migration - is in [CLAUDE.md](CLAUDE.md).
 
