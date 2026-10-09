@@ -191,10 +191,11 @@ Dated entries, newest first. What broke, why, what fixed it.
   fixed system GIDs 921-923 via sysusers.d (see gotcha 3). Note: rpm runs
   systemd-sysusers mid-build, so sysusers.d entries shipped in `system_files`
   take effect *before* later stages' packages install.
-- **2026-10-09** - The dev PC has **SVM disabled in the BIOS** (`SVM disabled
-  (by BIOS) in MSR_VM_CR`), so there is no `/dev/kvm`. `just vm` falls back to
-  TCG software emulation, which is far too slow for a desktop. Enabling SVM is
-  a BIOS toggle only James can make.
+- **2026-10-09** - The dev PC had **SVM disabled in the BIOS** (`SVM disabled
+  (by BIOS) in MSR_VM_CR`), so there was no `/dev/kvm` and `just vm` fell back
+  to unusably slow TCG. James enabled SVM Mode in the BIOS the same day;
+  `/dev/kvm` now exists. If it ever disappears (BIOS reset/update), that's
+  the first thing to check.
 - **2026-10-09** - First build failed: `proton-vpn-daemon`'s `%posttrans` runs
   `systemctl start`, impossible in a container build, and dnf fails the whole
   transaction. Fix: deps normally, the daemon alone with `tsflags=noscripts`,
