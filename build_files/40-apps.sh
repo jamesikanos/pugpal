@@ -10,10 +10,14 @@ set -euxo pipefail
 # 1Password's RPM scriptlets `groupadd` their setgid groups only if missing,
 # and a plain groupadd lands in the user range (1000+), colliding with the
 # first real user's own group. Pre-create them as system groups with the fixed
-# GIDs declared in system_files/usr/lib/sysusers.d/pugpal.conf.
-groupadd -r -g 921 onepassword
-groupadd -r -g 922 onepassword-cli
-groupadd -r -g 923 onepassword-mcp
+# GIDs declared in system_files/usr/lib/sysusers.d/pugpal.conf. rpm usually
+# runs systemd-sysusers during earlier stages, which already creates them from
+# that file, so only add what's missing - and fail loudly on a wrong GID.
+for spec in onepassword:921 onepassword-cli:922 onepassword-mcp:923; do
+    name=${spec%%:*} gid=${spec##*:}
+    getent group "$name" >/dev/null || groupadd -r -g "$gid" "$name"
+    [[ "$(getent group "$name" | cut -d: -f3)" == "$gid" ]]
+done
 
 dnf5 -y install \
     google-chrome-stable \
