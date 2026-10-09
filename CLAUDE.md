@@ -183,11 +183,13 @@ gamemode, MangoHud and gamescope. Addon tooling is documented in
 
 The look lives in the **private** `dotfiles/` repo (gitignored here): Hyprland
 `pugpal.lua` (starts DMS, keybinds) + `pugpal-look.lua` (orange active border,
-6px rounding, no shadows/blur), the DMS custom theme `pugpal.json` (dark =
+6px rounding, no shadows, slight blur), the DMS custom theme `pugpal.json` (dark =
 Vinnie, light = Jesse) with `cornerRadius: 6` and IBM Plex fonts, a kitty
-theme, the pug-head launcher icon, and the wallpapers (photo for the desktop,
-duotone for the lock screen; they contain the pugs' photo, hence private).
-Keybinds: Super+Space launcher, Super+L lock, Super+Esc power menu.
+theme (0.92 opacity), the pug-head launcher icon, the recording script, and
+the wallpaper: an illustration someone drew of Vinnie and Jesse years ago,
+vector-traced and recoloured (private - it's personal art). James's rule for
+pug art: **smooth and cuddly** (faceted/low-poly and photo cutouts were tried
+and rejected). Keybinds are listed in the dotfiles CLAUDE.md.
 
 Pug x FieldPal. Palette from the FieldPal site tokens and the pugs themselves:
 ink `#16171a` (Vinnie is `#110a09`), Jesse's cream `#f1e4d9` ~ FieldPal
