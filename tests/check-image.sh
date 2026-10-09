@@ -27,6 +27,8 @@ check "LSP LADSPA plugins (PodMic Tuned filter-chain)" test -f /usr/lib64/ladspa
 check "Archivo font installed" bash -c 'fc-list | grep -qi archivo'
 check "no avengemedia COPR left" bash -c '! ls /etc/yum.repos.d/ | grep -qi avengemedia'
 for p in wf-recorder swappy grim slurp; do check "$p (screenshots/recording)" rpm -q "$p"; done
+for p in zsh git fastfetch bat yq jq tmux ripgrep nmap plocate nodejs22 nodejs22-npm helm kubernetes1.35-client azure-cli minikube v4l-utils rocminfo; do check "$p" rpm -q "$p"; done
+check "zsh at /bin/zsh (James's login shell)" test -x /bin/zsh
 check "hyprland pinned to 0.56" bash -c 'rpm -q --qf "%{VERSION}" hyprland | grep -q "^0\.56"'
 
 echo "== /opt is a real directory with the /opt apps in it"
