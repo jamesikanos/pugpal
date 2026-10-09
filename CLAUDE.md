@@ -262,6 +262,17 @@ PugPal is a personal project, not a FieldPal product.
 
 Dated entries, newest first. What broke, why, what fixed it.
 
+- **2026-10-09** - **Local builds silently reused a stale layer.** Scripts and
+  system files enter the build through a bind mount, which podman's cache
+  ignores: `just build` "succeeded" with none of the new changes. Fixed with
+  `ARG CTX_HASH` (hash of build_files/ + system_files/, passed by the
+  Justfile). If a local test result ever looks impossible, suspect the cache;
+  CI is unaffected (fresh runners).
+- **2026-10-09** - **Freeze workarounds were only in `/etc/kernel/cmdline`** (root
+  disk): `processor.max_cstate=1 idle=nomwait amdgpu.runpm=0` plus kdump's
+  `crashkernel`. Now shipped via `/usr/lib/bootc/kargs.d/`, with the rest of the
+  freeze-diagnosis kit. kdump.service is in `kdump-utils` (not kexec-tools) since F40.
+
 - **2026-10-09** - **/etc audit**: the old install raised
   `fs.inotify.max_user_instances` to 8192 in `/etc/sysctl.d` (root disk). James's
   minikube e2e suites need it; now in `/usr/lib/sysctl.d/60-pugpal.conf`. Also
