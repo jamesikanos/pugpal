@@ -188,6 +188,15 @@ PugPal is a personal project, not a FieldPal product.
   builds - pin it like Hyprland. Check the chosen shell's Hyprland version
   requirements against the 0.56 pin. The updates-behind indicator below would
   be a Quickshell widget.
+  - **James wants it built from source** rather than relying on the COPR. Plan:
+    a multi-stage Containerfile builder stage (same `silverblue-main:44` base so
+    it compiles against the exact Qt the image ships - Quickshell uses Qt
+    private APIs and must be rebuilt on every Qt update, which our daily CI
+    does automatically), installing into a staging dir copied into the final
+    image. **Pin to a commit SHA** with Renovate opening bump PRs, so every
+    bump is revertible and smoke-tested. Optional `pugpal:edge` tag building
+    master HEAD nightly for VM-only testing. Hyprland stays on the COPR for now
+    (far more deps: aquamarine, hyprutils, hyprlang, ...).
 
 - **"Updates behind" indicator on the desktop.** James wants a visible alert
   showing how many updates the running system is behind. Ideas:
