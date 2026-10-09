@@ -74,6 +74,10 @@ Development happens on James's daily-driver Fedora. Nothing may change it:
 podman run --rm -it localhost/pugpal:latest bash   # poke around inside
 .tools/just test                     # smoke-test the built image (tests/check-image.sh)
 .tools/just check                    # Justfile syntax
+.tools/just fetch-disk               # download the newest CI test qcow2 into output/
+.tools/just vm                       # boot it (GL window); `just vm none` = headless
+.tools/just vm-ssh                   # ssh in as the throwaway pug user (password pugpal)
+.tools/just vm-reset                 # discard the VM's changes
 ```
 
 CI (`.github/workflows/build.yml`) builds on every push to `main` and daily
@@ -176,6 +180,17 @@ PugPal is a personal project, not a FieldPal product.
 
 Dated entries, newest first. What broke, why, what fixed it.
 
+- **2026-10-09** - CI qcow2 build failed: `cannot build manifest: failed to
+  initialize bootc distro: missing required info: DefaultRootFs`. The image
+  never declared an install filesystem (the template's local recipe hides this
+  with `--rootfs=btrfs`). Fixed with
+  `system_files/usr/lib/bootc/install/20-pugpal.toml` (btrfs).
+- **2026-10-09** - 1Password's scriptlets created `onepassword`,
+  `onepassword-cli`, `onepassword-mcp` at **GIDs 1000-1002** - the user range -
+  so `/usr/bin/op` would have been setgid to the real user's own group. Now
+  fixed system GIDs 921-923 via sysusers.d (see gotcha 3). Note: rpm runs
+  systemd-sysusers mid-build, so sysusers.d entries shipped in `system_files`
+  take effect *before* later stages' packages install.
 - **2026-10-09** - The dev PC has **SVM disabled in the BIOS** (`SVM disabled
   (by BIOS) in MSR_VM_CR`), so there is no `/dev/kvm`. `just vm` falls back to
   TCG software emulation, which is far too slow for a desktop. Enabling SVM is
