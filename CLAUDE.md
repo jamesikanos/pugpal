@@ -168,7 +168,15 @@ gamemode, MangoHud and gamescope. Addon tooling is documented in
    `/etc/systemd/system`, `/usr/local/bin`, NetworkManager connections,
    `rpm -qa` and `flatpak list`. (Fan curves from `/etc/coolercontrol` are
    already in pugpal-dotfiles `machine/main-pc/`.)
-2. Install stock Fedora Silverblue 44 onto the **root disk only**; leave the
+   **Docker lives on the root disk** (`/var/lib/docker`): images, build
+   cache AND named volumes (data). A reinstall wipes all of it. Before
+   migrating: prune what's disposable (`docker builder prune`,
+   `docker image prune -a`), then carry the volumes over - e.g. move Docker's
+   `data-root` onto the home disk, or `docker run --rm -v VOL:/v -v
+   /home/...:/b alpine tar` each volume. Check `docker system df` first.
+2. **Identify disks by UUID, never by name**: NVMe names (`nvme0n1`/`nvme1n1`)
+   can swap between boots. Re-run `lsblk -f` right before any disk step.
+   Install stock Fedora Silverblue 44 onto the **root disk only**; leave the
    separate `/home` disk unselected. Create the same username (UID 1000).
 3. Add the old home partition to `/etc/fstab` at `/var/home`, reboot.
 4. `sudo bootc switch ghcr.io/jamesikanos/pugpal:latest`, reboot.
@@ -249,6 +257,11 @@ PugPal is a personal project, not a FieldPal product.
 
 Dated entries, newest first. What broke, why, what fixed it.
 
+- **2026-10-09** - **Docker uses ~635 GB on the root disk** (build cache 302 GB,
+  608 images 172 GB, 17 volumes 148 GB) - an earlier `du` showed
+  `/var/lib/docker` as 4K only because it's root-only and unreadable without
+  sudo. Use `docker system df` (docker group) instead. Also: the two NVMe
+  drives **swapped device names across a reboot**; runbook now says UUIDs only.
 - **2026-10-09** - The first Flatpak installed on a fresh system (Spotify, in
   the VM) didn't appear in the DMS launcher until DMS restarted; the second
   (Flatseal) appeared instantly. DMS watches the XDG app dirs that exist at
