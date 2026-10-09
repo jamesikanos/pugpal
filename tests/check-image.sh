@@ -49,7 +49,7 @@ check "Hyprland wayland session"  bash -c 'ls /usr/share/wayland-sessions/ | gre
 check "GNOME wayland session"     bash -c 'ls /usr/share/wayland-sessions/ | grep -qi gnome'
 
 echo "== services"
-for u in docker.service coolercontrold.service libvirtd.socket vitals-recorder.timer pugpal-groups.service pugpal-prune.timer me.proton.vpn.split_tunneling.service gdm.service; do
+for u in docker.service coolercontrold.service libvirtd.socket vitals-recorder.timer pugpal-groups.service pugpal-prune.timer kdump.service me.proton.vpn.split_tunneling.service gdm.service; do
     check "$u enabled" systemctl is-enabled "$u"
 done
 
@@ -59,6 +59,9 @@ check "pugpal-prune never prunes volumes" bash -c '! grep -E "^[^#]*(--volumes|v
 check "ujust pugpal-clean recipe" grep -q "^pugpal-clean:" /usr/share/ublue-os/just/60-custom.just
 check "inotify limit raised for minikube docker-driver clusters" grep -qE "^fs.inotify.max_user_instances *= *8192" /usr/lib/sysctl.d/60-pugpal.conf
 check "stability kargs (C-states, amdgpu runpm) shipped" grep -q "amdgpu.runpm=0" /usr/lib/bootc/kargs.d/20-pugpal-stability.toml
+check "freeze kit: lockup panics" grep -q "kernel.softlockup_panic *= *1" /usr/lib/sysctl.d/61-pugpal-freeze-capture.conf
+check "freeze kit: watchdog" grep -q "RuntimeWatchdogSec=120" /usr/lib/systemd/system.conf.d/99-pugpal-watchdog.conf
+check "freeze kit: crashkernel karg" grep -q crashkernel /usr/lib/bootc/kargs.d/30-pugpal-kdump.toml
 check "bootc install has a default root fs" grep -q "type = \"btrfs\"" /usr/lib/bootc/install/20-pugpal.toml
 check "no third-party repo files" bash -c '! ls /etc/yum.repos.d/ | grep -Ei "docker|vscode|chrome|1password|proton|steam|copr.*(hyprland|protonplus|coolercontrol|scrcpy)"'
 

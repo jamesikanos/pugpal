@@ -27,7 +27,10 @@ dnf5 -y install \
     coolercontrold \
     obs-studio \
     lm_sensors \
-    lsp-plugins-ladspa      # PodMic Tuned's compressor/limiter (PipeWire filter-chain, see dotfiles audio/)
+    lsp-plugins-ladspa \
+    kexec-tools \
+    kdump-utils \
+    makedumpfile            # PodMic Tuned's LADSPA plugins; kdump (freeze-diagnosis kit; kdump.service is in kdump-utils since F40)
 
 # ProtonVPN. proton-vpn-daemon's %posttrans ends with `systemctl start`, which
 # can never succeed in a container build and fails the whole transaction.

@@ -1,0 +1,5 @@
+# Freeze-diagnosis kit: reserve memory for kdump so a kernel panic (including
+# the lockup panics set in sysctl.d/61-pugpal-freeze-capture.conf) leaves a
+# vmcore in /var/crash. Same reservation as the old install.
+kargs = ["crashkernel=2G-64G:256M,64G-:512M"]
+match-architectures = ["x86_64"]
