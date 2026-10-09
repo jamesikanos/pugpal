@@ -11,6 +11,7 @@ systemctl enable \
     vitals-recorder.timer \
     pugpal-groups.service \
     pugpal-prune.timer \
+    pugpal-vm-ssh.service \
     kdump.service \
     me.proton.vpn.split_tunneling.service
 

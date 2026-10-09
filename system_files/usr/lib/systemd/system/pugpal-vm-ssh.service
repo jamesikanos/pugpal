@@ -1,0 +1,16 @@
+[Unit]
+Description=Start sshd automatically when PugPal runs inside a VM (test VMs only)
+# On real hardware this condition is false and sshd stays off, exactly as in
+# stock Silverblue. In the throwaway test VM it lets `just vm-ssh` work with no
+# manual `systemctl enable --now sshd` on the VM console first.
+ConditionVirtualization=vm
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl start sshd.service
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
