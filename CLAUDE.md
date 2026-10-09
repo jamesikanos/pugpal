@@ -163,6 +163,22 @@ gamemode, MangoHud and gamescope. Addon tooling is documented in
    **not** mounted read-write - copy the WoW prefix instead.
 4. Migration of the real machine.
 
+## Next: real-hardware test on the external SSD (planned 2026-10-10)
+
+James found a 1 TB Samsung USB-C SSD (~1 GB/s). The drive gets wiped.
+1. Identify it by **model + serial + transport usb** (`lsblk -o NAME,MODEL,SERIAL,TRAN,SIZE`),
+   never by device name; show James, get explicit go-ahead.
+2. `sudo podman run --rm --privileged --pid=host -v /dev:/dev -v /var/lib/containers:/var/lib/containers --security-opt label=type:unconfined_t ghcr.io/jamesikanos/pugpal:latest bootc install to-disk --wipe /dev/disk/by-id/<the-usb-id>`
+   (the one agreed sudo exception; use the stable /dev/disk/by-id path).
+3. Boot it from the F11 menu; create/log in; dotfiles `install.sh`.
+4. Verify: `cat /proc/cmdline` has the stability kargs + crashkernel; CoolerControl
+   sees fans; PodMic RAW/Tuned present, BRIO mic absent; `bootloader-update` OK?;
+   recording uses VAAPI.
+5. Copy `~/Games/battlenet` + Lutris config/runners onto the SSD (do NOT mount the
+   real /home read-write), run WoW (Super+F).
+6. Run fieldpal-backend `e2e/sealed.sh` + `e2e/shared.sh` and kalyx `yarn k8s:verify`.
+7. Log findings here; fix in the image.
+
 ## Migration runbook (generic; specifics in `local/machine.md`)
 
 0. Run `just audit-packages` and `just audit-etc` against the current image;
@@ -302,8 +318,8 @@ Dated entries, newest first. What broke, why, what fixed it.
   failures: `mcelog` (no MCE in VMs - harmless) and `bootloader-update`
   (`bootupctl: Parsing "/sysroot/.bootc-aleph.json": invalid type: null`) -
   probably an artifact of image-builder's install path; re-check on the SSD.
-  SSH is off by default (Silverblue), so the VM needs
-  `sudo systemctl enable --now sshd` from its console once.
+  SSH is off by default (Silverblue). Fixed later the same day:
+  `pugpal-vm-ssh.service` starts sshd only when `ConditionVirtualization=vm`.
 - **2026-10-09** - **`just vm-ssh` ran part of a command on the dev PC.**
   `{{ cmd }}` was spliced unquoted into the ssh line, so `a; b` sent only `a`
   to the VM and ran `b` locally. Only read-only commands were affected. Fixed
