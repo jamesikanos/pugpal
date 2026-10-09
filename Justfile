@@ -490,7 +490,9 @@ fetch-disk:
     set -euo pipefail
     run=$(gh run list -w build-disk.yml -s success -L 1 --json databaseId -q '.[0].databaseId')
     [[ -n "$run" ]] || { echo "no successful build-disk run yet" >&2; exit 1; }
-    rm -rf output/qcow2 && mkdir -p output
+    # Replace, never accumulate: the old disk AND the VM overlay built on it
+    # (an overlay on a different base disk is garbage anyway).
+    rm -rf output/qcow2 vm && mkdir -p output
     gh run download "$run" -D output/_dl
     find output/_dl -name '*.qcow2' -exec install -D -m644 {} output/qcow2/disk.qcow2 \;
     rm -rf output/_dl
