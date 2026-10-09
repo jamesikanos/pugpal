@@ -1,0 +1,8 @@
+# Kernel arguments carried over from the old install (/etc/kernel/cmdline -
+# root disk, so the migration would have dropped them). Stability workarounds
+# for this machine's idle freezes (Ryzen 9 3900X + RX 9070):
+#   processor.max_cstate=1, idle=nomwait - keep the CPU out of deep C-states
+#   amdgpu.runpm=0                       - no GPU runtime power-down at idle
+# bootc applies kargs.d on install and keeps them in sync across upgrades.
+kargs = ["processor.max_cstate=1", "idle=nomwait", "amdgpu.runpm=0"]
+match-architectures = ["x86_64"]

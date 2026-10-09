@@ -556,9 +556,9 @@ audit-etc:
     #!/usr/bin/env bash
     set -euo pipefail
     mkdir -p local/audit
-    find /etc -xdev -type f -readable 2>/dev/null \
-      | xargs rpm -qf 2>/dev/null | sed -nE 's/^file (.*) is not owned by any package$/\1/p' \
-      | grep -vE '/etc/systemd/system.control/|\.(rpmnew|rpmsave|bak|lock|cache)$|/etc/(passwd|group|shadow|gshadow|subuid|subgid|hostname|localtime|resolv.conf|fstab|machine-id|machine-info|locale.conf|vconsole.conf|\.pwd.lock|\.updated)|/etc/(nvme|sysconfig)/' \
+    { find /etc -xdev -type f -readable 2>/dev/null || true; } \
+      | { xargs rpm -qf 2>/dev/null || true; } | sed -nE 's/^file (.*) is not owned by any package$/\1/p' \
+      | grep -vE '/etc/systemd/system.control/|\.(rpmnew|rpmsave|bak|lock|cache)$|/etc/(passwd|group|shadow|gshadow|subuid|subgid|hostname|localtime|resolv.conf|fstab|machine-id|machine-info|locale.conf|vconsole.conf|\.pwd.lock|\.updated)|/etc/(nvme|sysconfig|yum.repos.d)/' \
       | sort | tee local/audit/etc-unowned.txt
     echo "$(wc -l < local/audit/etc-unowned.txt) unowned files in /etc (root-only dirs not readable without sudo)" >&2
 
