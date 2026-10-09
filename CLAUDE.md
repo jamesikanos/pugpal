@@ -178,6 +178,17 @@ PugPal is a personal project, not a FieldPal product.
 
 ## Backlog (future work, not started)
 
+- **Quickshell as the shell layer** (instead of Waybar + mako + fuzzel +
+  hyprlock styled separately). One QML shell = bar, launcher, notifications,
+  lock screen, OSDs, all driven by `branding/palette.toml`. Plan: fork an
+  existing Quickshell shell James likes (Caelestia / Noctalia /
+  DankMaterialShell / end-4 illogical-impulse) into the private dotfiles repo
+  and restyle it; don't write one from scratch. Packaging: Fedora 44 has an old
+  snapshot (0.2.1); COPR `errornointernet/quickshell` has 0.3.2 with F44
+  builds - pin it like Hyprland. Check the chosen shell's Hyprland version
+  requirements against the 0.56 pin. The updates-behind indicator below would
+  be a Quickshell widget.
+
 - **"Updates behind" indicator on the desktop.** James wants a visible alert
   showing how many updates the running system is behind. Ideas:
   - A Waybar custom module (plus a GNOME equivalent for the fallback session)
