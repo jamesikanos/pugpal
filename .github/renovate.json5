@@ -6,6 +6,19 @@
 
   "rebaseWhen": "never",
 
+  // Quickshell is built from a pinned upstream commit (build_files/quickshell/
+  // quickshell.spec). Renovate proposes a PR whenever upstream master moves, so
+  // every bump is a reviewable, revertible, smoke-tested commit.
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^build_files/quickshell/quickshell\\.spec$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+) currentValue=(?<currentValue>\\S+)\\n%global commit\\s+(?<currentDigest>[a-f0-9]{40})"
+      ],
+    },
+  ],
+
   "packageRules": [
     {
       "automerge": true,
