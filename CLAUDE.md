@@ -51,6 +51,7 @@ build_files/
 system_files/            copied over / at build time
   usr/libexec/pugpal-groups + pugpal-groups.service   wheel users -> docker, libvirt
   usr/bin/vitals-record + vitals-recorder.{service,timer}  30s vitals log for freeze diagnosis
+scripts/install-to-disk.sh  `just install-disk`: bootc install to an external USB disk (picker, serial confirm, --dry-run)
 disk_config/disk.toml    image-builder blueprint for the CI test qcow2 (throwaway pug user)
 branding/                palette.toml, logo SVGs, tools/ (cutout.py, wallpaper.py - run from local/venv-branding)
 dotfiles/                gitignored: the separate PRIVATE pugpal-dotfiles repo (the look)
@@ -168,8 +169,9 @@ gamemode, MangoHud and gamescope. Addon tooling is documented in
 James found a 1 TB Samsung USB-C SSD (~1 GB/s). The drive gets wiped.
 1. Identify it by **model + serial + transport usb** (`lsblk -o NAME,MODEL,SERIAL,TRAN,SIZE`),
    never by device name; show James, get explicit go-ahead.
-2. `sudo podman run --rm --privileged --pid=host -v /dev:/dev -v /var/lib/containers:/var/lib/containers --security-opt label=type:unconfined_t ghcr.io/jamesikanos/pugpal:latest bootc install to-disk --wipe /dev/disk/by-id/<the-usb-id>`
-   (the one agreed sudo exception; use the stable /dev/disk/by-id path).
+2. `.tools/just install-disk --dry-run`, then `.tools/just install-disk` (the one agreed
+   sudo exception). It lists USB disks only, targets the /dev/disk/by-id path, and
+   wants the serial typed before it runs `bootc install to-disk --wipe`.
 3. Boot it from the F11 menu; create/log in; dotfiles `install.sh`.
 4. Verify: `cat /proc/cmdline` has the stability kargs + crashkernel; CoolerControl
    sees fans; PodMic RAW/Tuned present, BRIO mic absent; `bootloader-update` OK?;

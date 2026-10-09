@@ -571,3 +571,8 @@ audit-etc:
 [group('PugPal')]
 vm-reset:
     rm -rf vm/
+
+# Install the published image onto an external USB disk (picker + serial confirmation). just install-disk --dry-run
+[group('PugPal')]
+install-disk *args:
+    scripts/install-to-disk.sh {{ args }}
