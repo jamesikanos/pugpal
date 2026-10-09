@@ -176,6 +176,27 @@ PugPal is a personal project, not a FieldPal product.
 - Commit 1 is the unmodified upstream template, so `git diff <that> -- <file>`
   shows exactly what PugPal changed.
 
+## Backlog (future work, not started)
+
+- **"Updates behind" indicator on the desktop.** James wants a visible alert
+  showing how many updates the running system is behind. Ideas:
+  - A Waybar custom module (plus a GNOME equivalent for the fallback session)
+    that compares the booted image digest/version (`bootc status --json`) with
+    the newest `ghcr.io/jamesikanos/pugpal` tag, e.g. "3 builds behind", or
+    "update staged - reboot to apply" when `rpm-ostreed-automatic` has already
+    staged one.
+  - Include Flatpak updates (`flatpak remote-ls --updates`) in the count.
+  - A mako notification when an update is staged, so a reboot isn't forgotten.
+    Matters because image apps (e.g. Chrome) only update on reboot.
+  - Must not poll ghcr.io aggressively; something like hourly via a user
+    systemd timer that writes a small state file the bar reads.
+- **Chrome: image vs Flatpak** - undecided. Image Chrome updates only on reboot
+  but keeps 1Password desktop integration; Flatpak updates live but 1Password
+  doesn't officially support sandboxed browsers. Leaning image + regular reboots.
+- **Better pug cutouts** for wallpapers: the flood-fill cutout keeps the
+  off-white studio floor (too close to Jesse's coat colour). Use an ML
+  background remover (e.g. rembg in a venv under `local/`).
+
 ## Troubleshooting log
 
 Dated entries, newest first. What broke, why, what fixed it.
