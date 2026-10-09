@@ -14,8 +14,23 @@ dnf5 -y install \
     coolercontrol \
     coolercontrold \
     obs-studio \
-    proton-vpn-gnome-desktop \
     lm_sensors
+
+# ProtonVPN. proton-vpn-daemon's %posttrans ends with `systemctl start`, which
+# can never succeed in a container build and fails the whole transaction.
+# Install its dependencies normally, then the daemon alone with scriptlets off
+# (that posttrans is its only scriptlet: daemon-reload/enable/start), and
+# enable its split-tunneling service in 90-cleanup.sh instead.
+dnf5 -y install \
+    python3-bcc \
+    python3-dbus-fast \
+    python3-packaging \
+    python3-proton-vpn-api-core \
+    python3-psutil \
+    python3-systemd \
+    wireguard-tools
+dnf5 -y install --setopt=tsflags=noscripts proton-vpn-daemon
+dnf5 -y install proton-vpn-gnome-desktop
 
 # 1Password's browser-integration helper is setgid "onepassword". The group was
 # created by the RPM scriptlet during this build, but on a deployed system

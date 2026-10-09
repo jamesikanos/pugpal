@@ -9,7 +9,8 @@ systemctl enable \
     coolercontrold.service \
     libvirtd.socket \
     vitals-recorder.timer \
-    pugpal-groups.service
+    pugpal-groups.service \
+    me.proton.vpn.split_tunneling.service
 
 for copr in \
     sdegler/hyprland \
