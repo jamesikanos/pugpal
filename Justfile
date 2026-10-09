@@ -519,6 +519,11 @@ vm:
 vm-ssh *cmd:
     ssh -i local/vm-ssh/id_ed25519 -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR pug@127.0.0.1 {{ cmd }}
 
+# Smoke-test a built image without booting it
+[group('PugPal')]
+test image="localhost/pugpal:latest":
+    tests/check-image.sh {{ image }}
+
 # Throw away the VM's changes (keeps the downloaded disk)
 [group('PugPal')]
 vm-reset:
