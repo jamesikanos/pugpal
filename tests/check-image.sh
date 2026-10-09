@@ -23,6 +23,7 @@ done
 check "no system wine (Lutris uses GE-Proton runners)" bash -c '! rpm -q wine-core'
 for p in dms dms-cli dgop matugen ibm-plex-sans-fonts ibm-plex-mono-fonts; do check "$p" rpm -q "$p"; done
 check "quickshell is PugPal's own build" bash -c 'rpm -q --qf "%{RELEASE}" quickshell | grep -q pugpal'
+check "LSP LADSPA plugins (PodMic Tuned filter-chain)" test -f /usr/lib64/ladspa/lsp-plugins-ladspa.so
 check "Archivo font installed" bash -c 'fc-list | grep -qi archivo'
 check "no avengemedia COPR left" bash -c '! ls /etc/yum.repos.d/ | grep -qi avengemedia'
 check "hyprland pinned to 0.56" bash -c 'rpm -q --qf "%{VERSION}" hyprland | grep -q "^0\.56"'

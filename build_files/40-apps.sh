@@ -26,7 +26,8 @@ dnf5 -y install \
     coolercontrol \
     coolercontrold \
     obs-studio \
-    lm_sensors
+    lm_sensors \
+    lsp-plugins-ladspa      # PodMic Tuned's compressor/limiter (PipeWire filter-chain, see dotfiles audio/)
 
 # ProtonVPN. proton-vpn-daemon's %posttrans ends with `systemctl start`, which
 # can never succeed in a container build and fails the whole transaction.
