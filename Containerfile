@@ -3,9 +3,11 @@ FROM scratch AS ctx
 COPY build_files /
 COPY system_files /system_files
 
-# Universal Blue base-main: Fedora Atomic + codecs + ublue tooling, no desktop
-# opinions beyond GNOME. Pinned to the Fedora major; bump it on purpose.
-FROM ghcr.io/ublue-os/base-main:44
+# Universal Blue silverblue-main: base-main (Fedora Atomic + codecs + ublue
+# tooling) plus stock GNOME/GDM, which is PugPal's fallback session next to
+# Hyprland. Plain base-main has no desktop at all. Pinned to the Fedora major;
+# bump it on purpose.
+FROM ghcr.io/ublue-os/silverblue-main:44
 
 ### IMMUTABLE /opt
 ## Fedora atomic symlinks /opt -> /var/opt, so anything an RPM writes there at
