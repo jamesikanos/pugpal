@@ -1,0 +1,22 @@
+#!/usr/bin/bash
+# Put interactive (wheel) users into the docker and libvirt groups.
+#
+# On an image-based system, groups created by RPM scriptlets at build time can
+# end up only in /usr/lib/group (read via nss-altfiles). `usermod -aG` edits
+# /etc/group and fails for a group that isn't there, so copy the group line
+# across first. Idempotent; runs on every boot and is cheap.
+set -euo pipefail
+
+for group in docker libvirt; do
+    if ! grep -q "^${group}:" /etc/group; then
+        line=$(grep "^${group}:" /usr/lib/group || true)
+        if [[ -z "$line" ]]; then
+            echo "pugpal-groups: no ${group} group anywhere, skipping" >&2
+            continue
+        fi
+        echo "$line" >> /etc/group
+    fi
+    for user in $(getent group wheel | cut -d: -f4 | tr ',' ' '); do
+        id -nG "$user" | grep -qw "$group" || usermod -aG "$group" "$user"
+    done
+done

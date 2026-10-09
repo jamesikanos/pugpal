@@ -1,0 +1,11 @@
+[Unit]
+Description=Add wheel users to docker and libvirt groups
+After=systemd-sysusers.service
+Before=systemd-user-sessions.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/pugpal-groups
+
+[Install]
+WantedBy=multi-user.target
