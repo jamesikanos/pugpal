@@ -37,7 +37,7 @@ check "Hyprland wayland session"  bash -c 'ls /usr/share/wayland-sessions/ | gre
 check "GNOME wayland session"     bash -c 'ls /usr/share/wayland-sessions/ | grep -qi gnome'
 
 echo "== services"
-for u in docker.service coolercontrold.service libvirtd.socket vitals-recorder.timer pugpal-groups.service gdm.service; do
+for u in docker.service coolercontrold.service libvirtd.socket vitals-recorder.timer pugpal-groups.service me.proton.vpn.split_tunneling.service gdm.service; do
     check "$u enabled" systemctl is-enabled "$u"
 done
 
