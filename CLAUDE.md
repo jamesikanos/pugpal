@@ -240,6 +240,18 @@ PugPal is a personal project, not a FieldPal product.
 
 ## Backlog (future work, not started)
 
+- **Second machine: James's laptop on PugPal** (desktop + laptop, same OS,
+  same look, same files). Before it happens: make the desktop-only bits
+  machine-specific - `kargs.d/20-pugpal-stability.toml`
+  (`processor.max_cstate=1` would wreck laptop battery life),
+  `30-pugpal-kdump.toml` and the freeze kit, CoolerControl, PodMic audio. Options: image variants
+  (`pugpal` / `pugpal-laptop`) or per-machine `rpm-ostree kargs`. Check the
+  laptop's GPU (Intel/AMD/NVIDIA) first.
+- **File sync between machines.** James wants Proton Drive, but (Oct 2026) its
+  native Linux sync client is announced, not shipped (targeted end of 2026);
+  only a CLI exists. Interim options: Syncthing (desktop <-> laptop directly)
+  or rclone `bisync` with the Proton Drive backend. Revisit when Proton ships.
+
 - **One-command setup "just for James"** (next up, after the end-to-end VM
   test). Flow: stock Silverblue -> `sudo bootc switch ghcr.io/jamesikanos/pugpal:latest
   && systemctl reboot` -> on first login an autostart helper (only if
