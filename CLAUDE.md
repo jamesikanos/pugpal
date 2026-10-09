@@ -72,11 +72,12 @@ Development happens on James's daily-driver Fedora. Nothing may change it:
 ```bash
 .tools/just build                    # rootless local build -> localhost/pugpal:latest
 podman run --rm -it localhost/pugpal:latest bash   # poke around inside
+.tools/just test                     # smoke-test the built image (tests/check-image.sh)
 .tools/just check                    # Justfile syntax
 ```
 
-CI (`.github/workflows/build.yml`) builds on every push to `main` and weekly,
-rechunks, pushes to `ghcr.io/jamesikanos/pugpal`, and signs with cosign
+CI (`.github/workflows/build.yml`) builds on every push to `main` and daily
+(10:05 UTC, picks up Fedora updates), runs `tests/check-image.sh`, rechunks, pushes to `ghcr.io/jamesikanos/pugpal`, and signs with cosign
 (`SIGNING_SECRET` repo secret = `cosign.key`; `cosign.pub` is committed).
 
 `build-disk.yml` (manual) turns the published image into a qcow2 artifact for
