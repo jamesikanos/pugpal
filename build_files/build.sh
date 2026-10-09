@@ -1,27 +1,15 @@
 #!/bin/bash
+# PugPal build entrypoint. Runs inside the Containerfile RUN step with the
+# build context mounted at /ctx. Each numbered stage owns one area of the
+# image; add a package to the stage it belongs to, not here.
 
-set -ouex pipefail
+set -euxo pipefail
 
-# Copy the contents of system_files/ of the git repo to /
-cp -avf "/ctx/system_files"/. /
+# Overlay our files onto / first, so stages can rely on them.
+cp -avf /ctx/system_files/. /
 
-### Install packages
-
-# Packages can be installed from any enabled yum repo on the image.
-# RPMfusion repos are available by default in ublue main images
-# List of rpmfusion packages can be found here:
-# https://mirrors.rpmfusion.org/mirrorlist?path=free/fedora/updates/43/x86_64/repoview/index.html&protocol=https&redirect=1
-
-# this installs a package from fedora repos
-dnf5 install -y tmux
-
-# Use a COPR Example:
-#
-# dnf5 -y copr enable ublue-os/staging
-# dnf5 -y install package
-# Disable COPRs so they don't end up enabled on the final image:
-# dnf5 -y copr disable ublue-os/staging
-
-#### Example for enabling a System Unit File
-
-systemctl enable podman.socket
+for stage in /ctx/[0-9][0-9]-*.sh; do
+    echo "::group:: ===== $(basename "$stage") ====="
+    bash "$stage"
+    echo "::endgroup::"
+done
