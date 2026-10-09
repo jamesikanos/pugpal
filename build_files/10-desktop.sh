@@ -31,4 +31,6 @@ dnf5 -y install \
     blueman \
     qt5-qtwayland \
     qt6-qtwayland \
-    kitty
+    kitty \
+    wf-recorder \
+    swappy

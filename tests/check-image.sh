@@ -26,6 +26,7 @@ check "quickshell is PugPal's own build" bash -c 'rpm -q --qf "%{RELEASE}" quick
 check "LSP LADSPA plugins (PodMic Tuned filter-chain)" test -f /usr/lib64/ladspa/lsp-plugins-ladspa.so
 check "Archivo font installed" bash -c 'fc-list | grep -qi archivo'
 check "no avengemedia COPR left" bash -c '! ls /etc/yum.repos.d/ | grep -qi avengemedia'
+for p in wf-recorder swappy grim slurp; do check "$p (screenshots/recording)" rpm -q "$p"; done
 check "hyprland pinned to 0.56" bash -c 'rpm -q --qf "%{VERSION}" hyprland | grep -q "^0\.56"'
 
 echo "== /opt is a real directory with the /opt apps in it"
