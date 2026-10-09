@@ -539,6 +539,17 @@ vm-push dest +src:
 vm-pull src dest:
     @scp -q -i local/vm-ssh/id_ed25519 -P 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR pug@127.0.0.1:{{ quote(src) }} {{ quote(dest) }}
 
+# Packages hand-installed on THIS machine that the image lacks (read-only; writes local/audit/)
+[group('PugPal')]
+audit-packages image="localhost/pugpal:latest":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p local/audit
+    dnf5 repoquery --userinstalled --qf '%{name}\n' 2>/dev/null | sort -u > local/audit/host-userinstalled.txt
+    podman run --rm {{ image }} rpm -qa --qf '%{NAME}\n' | sort -u > local/audit/image.txt
+    comm -23 local/audit/host-userinstalled.txt local/audit/image.txt | tee local/audit/missing.txt
+    echo "$(wc -l < local/audit/missing.txt) packages on this machine are not in {{ image }}" >&2
+
 # Throw away the VM's changes (keeps the downloaded disk)
 [group('PugPal')]
 vm-reset:

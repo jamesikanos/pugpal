@@ -41,7 +41,8 @@ build_files/
   repos/*.repo           third-party repo definitions (copied in, removed at the end)
   00-repos.sh            installs repo files, enables COPRs
   quickshell/quickshell.spec  our Quickshell RPM (pinned commit), built in the Containerfile's builder stage
-  10-desktop.sh          Hyprland + Wayland tools
+  05-cli.sh              zsh (login shell!), git, everyday CLI tools (from the package audit)
+  10-desktop.sh          Hyprland + Wayland tools, wf-recorder, swappy
   15-shell.sh            our Quickshell RPM + DankMaterialShell (avengemedia COPRs, this stage only) + brand fonts
   20-gaming.sh           Lutris, Steam, gamescope, gamemode, MangoHud, 32-bit Mesa, ProtonPlus
   30-dev.sh              Docker CE, VS Code, libvirt/QEMU, neovim, gh, adb, scrcpy
@@ -164,6 +165,8 @@ gamemode, MangoHud and gamescope. Addon tooling is documented in
 
 ## Migration runbook (generic; specifics in `local/machine.md`)
 
+0. Run `just audit-packages` against the current image; anything missing
+   goes into the image, the dotfiles' flatpaks.txt, or is consciously skipped.
 1. Back up from the root disk into `/home`: custom units in
    `/etc/systemd/system`, `/usr/local/bin`, NetworkManager connections,
    `rpm -qa` and `flatpak list`. (Fan curves from `/etc/coolercontrol` are
@@ -257,6 +260,12 @@ PugPal is a personal project, not a FieldPal product.
 
 Dated entries, newest first. What broke, why, what fixed it.
 
+- **2026-10-09** - **Package audit** (`just audit-packages`: `dnf repoquery
+  --userinstalled` on the old install vs the image) found 151 missing
+  packages, including **zsh - James's login shell** (he couldn't have logged
+  in after `bootc switch`) and **git**. CLI/dev tools went into the image
+  (`05-cli.sh`, `30-dev.sh`), GUI apps into the dotfiles' `flatpaks.txt`,
+  Workstation/live-USB plumbing skipped. **Re-run it before migrating.**
 - **2026-10-09** - **Docker uses ~635 GB on the root disk** (build cache 302 GB,
   608 images 172 GB, 17 volumes 148 GB) - an earlier `du` showed
   `/var/lib/docker` as 4K only because it's root-only and unreadable without
