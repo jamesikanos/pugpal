@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Append one fsync'd vitals line. fsync matters: without it the last minutes
+# before a freeze sit in page cache and die with the machine.
+LOG=/var/log/vitals.log
+{
+    printf '%s' "$(date -Is)"
+    printf ' load=%s' "$(cut -d' ' -f1-3 /proc/loadavg)"
+
+    # CPU package temp
+    if command -v sensors >/dev/null 2>&1; then
+        printf ' cpu_temp=%s' "$(sensors 2>/dev/null | awk '/Tctl|Tdie/{print $2; exit}')"
+    fi
+
+    # GPU: temp, power, clocks, and current power state
+    for h in /sys/class/drm/card*/device/hwmon/hwmon*; do
+        [ -d "$h" ] || continue
+        [ -r "$h/temp1_input" ] && printf ' gpu_temp=%sC' "$(( $(cat "$h/temp1_input") / 1000 ))"
+        [ -r "$h/power1_average" ] && printf ' gpu_pwr=%sW' "$(( $(cat "$h/power1_average") / 1000000 ))"
+    done
+    for d in /sys/class/drm/card*/device; do
+        [ -r "$d/power_dpm_force_performance_level" ] && \
+            printf ' gpu_dpm=%s' "$(cat "$d/power_dpm_force_performance_level")"
+        [ -r "$d/power/runtime_status" ] && \
+            printf ' gpu_rpm=%s' "$(cat "$d/power/runtime_status")"
+    done
+
+    # GPU clocks + active DPM level. THE key field: an 'S' level or a very low
+    # SCLK means the GPU reached its deep-sleep state. Logged directly rather
+    # than inferred from power draw.
+    for d in /sys/class/drm/card*/device; do
+        if [ -r "$d/pp_dpm_sclk" ]; then
+            printf ' sclk=%s' "$(awk '/\*/{gsub(/Mhz/,"");print $2}' "$d/pp_dpm_sclk" 2>/dev/null | head -1)"
+            printf ' sclk_lvl=%s' "$(awk '/\*/{gsub(/:/,"");print $1}' "$d/pp_dpm_sclk" 2>/dev/null | head -1)"
+            printf ' sclk_mask=%s' "$(awk '{gsub(/:/,"");printf "%s",$1}' "$d/pp_dpm_sclk" 2>/dev/null)"
+        fi
+        [ -r "$d/pp_dpm_mclk" ] && \
+            printf ' mclk=%s' "$(awk '/\*/{gsub(/Mhz/,"");print $2}' "$d/pp_dpm_mclk" 2>/dev/null | head -1)"
+    done
+
+    # CPU idle residency - shows if anything is entering an unexpected state
+    printf ' c1_usage=%s' "$(cat /sys/devices/system/cpu/cpu0/cpuidle/state1/usage 2>/dev/null)"
+
+    # PCIe ASPM link state of the GPU (the leading idle-hang suspect)
+    printf ' aspm=%s' "$(tr -d '\0' < /sys/module/pcie_aspm/parameters/policy 2>/dev/null | tr -d '\n')"
+
+    printf ' mem_avail=%skB' "$(awk '/MemAvailable/{print $2}' /proc/meminfo)"
+    printf '\n'
+} >> "$LOG"
+sync -d "$LOG" 2>/dev/null || sync

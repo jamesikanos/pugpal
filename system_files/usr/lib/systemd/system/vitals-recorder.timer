@@ -1,0 +1,10 @@
+[Unit]
+Description=Record system vitals every 30s
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=30
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

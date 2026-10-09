@@ -1,0 +1,6 @@
+[Unit]
+Description=Record system vitals for freeze diagnosis
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/vitals-record
