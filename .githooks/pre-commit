@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Block commits that contain secrets. This repo is public.
+# Enable with: git config core.hooksPath .githooks
+set -euo pipefail
+root=$(git rev-parse --show-toplevel)
+gitleaks="${root}/.tools/gitleaks"
+if [[ ! -x "$gitleaks" ]]; then
+    echo "pre-commit: ${gitleaks} missing - run 'just tools' first" >&2
+    exit 1
+fi
+exec "$gitleaks" git --pre-commit --staged --redact --no-banner "$root"
