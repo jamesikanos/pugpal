@@ -1,0 +1,35 @@
+# PugPal palette - Vinnie x Jesse x FieldPal.
+#
+# Sources: FieldPal site tokens (fieldpalaiwebsite26 src CSS) and colours
+# sampled from the pugs' photos. Every theme file (Hyprland, Waybar, kitty,
+# GTK, hyprlock, fuzzel, mako) should derive from these names, never from raw
+# hex, so a palette tweak lands everywhere.
+
+[base]                      # Vinnie: the dark ground
+ink        = "#16171a"      # FieldPal --c-ink. Vinnie's coat samples #110a09.
+ink_raised = "#1b1c1f"      # panels, bar
+ink_line   = "#2D2D2D"      # FieldPal logo tile; borders on inactive windows
+ink_rule   = "#33343a"      # FieldPal --c-rule-dark-3; separators
+
+[fawn]                      # Jesse
+cream      = "#f1e4d9"      # Jesse's coat (studio light); main text on dark
+cream_soft = "#f2f0eb"      # FieldPal --c-bg-alt; light surfaces
+mask       = "#32231f"      # Jesse's muzzle; warm dark secondary surface
+fawn       = "#c9a27e"      # estimated true fawn in daylight - confirm with a daylight photo
+
+[grey]                      # Vinnie's grey muzzle ~ FieldPal warm greys
+muzzle     = "#504c4b"      # sampled from Vinnie today
+muted      = "#9c978e"      # FieldPal --c-muted-3; secondary text on dark
+muted_dark = "#6b6862"      # FieldPal --c-muted
+
+[accent]                    # FieldPal orange - the ONE accent
+orange        = "#E8480F"   # FieldPal --c-brand; borders, buttons
+orange_bright = "#ff6b2c"   # FieldPal --c-brand-bright; text/icons on dark (better contrast)
+orange_logo   = "#DE5226"   # FP monogram 'F'
+
+[rules]
+# FieldPal design system, carried into the desktop:
+corner_radius = 0           # hard rectangles, everywhere
+shadows       = false
+hover         = "colour change only - no lifts, no transforms"
+fonts         = { heading = "Archivo", ui = "IBM Plex Sans", mono = "IBM Plex Mono (BlexMono Nerd Font)" }
