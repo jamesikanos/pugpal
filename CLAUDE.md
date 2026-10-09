@@ -183,8 +183,8 @@ gamemode, MangoHud and gamescope. Addon tooling is documented in
 
 The look lives in the **private** `dotfiles/` repo (gitignored here): Hyprland
 `pugpal.lua` (starts DMS, keybinds) + `pugpal-look.lua` (orange active border,
-rounding 0, no shadows/blur), the DMS custom theme `pugpal.json` (dark =
-Vinnie, light = Jesse) with `cornerRadius: 0` and IBM Plex fonts, a kitty
+6px rounding, no shadows/blur), the DMS custom theme `pugpal.json` (dark =
+Vinnie, light = Jesse) with `cornerRadius: 6` and IBM Plex fonts, a kitty
 theme, the pug-head launcher icon, and the wallpapers (photo for the desktop,
 duotone for the lock screen; they contain the pugs' photo, hence private).
 Keybinds: Super+Space launcher, Super+L lock, Super+Esc power menu.
@@ -192,7 +192,7 @@ Keybinds: Super+Space launcher, Super+L lock, Super+Esc power menu.
 Pug x FieldPal. Palette from the FieldPal site tokens and the pugs themselves:
 ink `#16171a` (Vinnie is `#110a09`), Jesse's cream `#f1e4d9` ~ FieldPal
 off-white `#f2f0eb`, Jesse's mask `#32231f`, FieldPal orange `#E8480F` /
-`#ff6b2c` (on dark). Hard rectangles, `rounding = 0`, no shadows. Archivo /
+`#ff6b2c` (on dark). Slightly rounded (6px everywhere - pure FieldPal squares felt harsh on a desktop), no shadows. Archivo /
 IBM Plex Sans / IBM Plex Mono. The theme itself lives in a separate, private
 dotfiles repo; this image ships only the tools and fonts.
 PugPal is a personal project, not a FieldPal product.

@@ -29,7 +29,7 @@ orange_logo   = "#DE5226"   # FP monogram 'F'
 
 [rules]
 # FieldPal design system, carried into the desktop:
-corner_radius = 0           # hard rectangles, everywhere
+corner_radius = 6           # px. Was 0 (pure FieldPal); James found it harsh - 6 is crisp, not bubbly
 shadows       = false
 hover         = "colour change only - no lifts, no transforms"
 fonts         = { heading = "Archivo", ui = "IBM Plex Sans", mono = "IBM Plex Mono (BlexMono Nerd Font)" }
