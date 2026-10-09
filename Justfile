@@ -522,7 +522,7 @@ vm display="gtk":
 # SSH into the running test VM as the throwaway pug user
 [group('PugPal')]
 vm-ssh *cmd:
-    ssh -i local/vm-ssh/id_ed25519 -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR pug@127.0.0.1 {{ cmd }}
+    @ssh -i local/vm-ssh/id_ed25519 -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR pug@127.0.0.1 {{ quote(cmd) }}
 
 # Smoke-test a built image without booting it
 [group('PugPal')]
