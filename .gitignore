@@ -4,3 +4,18 @@ output
 _build-*/**
 *_chunkah_*
 *_rpm-ostree_*
+
+# --- PugPal additions ---
+# Secrets: the cosign private key lives only in the SIGNING_SECRET repo secret.
+*.key
+.env
+.env.*
+# Project-local tool binaries (just, cosign, gitleaks) - never installed system-wide.
+.tools/
+# Machine-specific notes (disk UUIDs, device names). This repo is public.
+local/
+# Disk images and VM state.
+*.qcow2
+*.iso
+*.raw
+vm/
