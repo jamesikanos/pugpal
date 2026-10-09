@@ -1,3 +1,16 @@
+# bootc-image-builder config for the TEST VM qcow2 only (built in CI by
+# build-disk.yml). It never applies to a real install, which goes through the
+# Silverblue installer + `bootc switch`.
+#
+# Test user "pug" / password "pugpal" - deliberately throwaway, VM-only. The
+# SSH key's private half is in the gitignored local/vm-ssh/.
+
 [[customizations.filesystem]]
 mountpoint = "/"
-minsize = "20 GiB"
+minsize = "40 GiB"
+
+[[customizations.user]]
+name = "pug"
+password = "$6$wLyWX3miXBhyGWGP$pcjNoeYjLHiVe4cpjJxBQA.SRg1E0Z0y663mfcaMcYljC11ZeW/YwLHFSwo93R5bSXWITVC8LyDatGEKxk5A2/"
+key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILZrCs2iQsF/P7Q0sPraENSEQtluTCa+Wfl0IOEIBc5D pugpal-test-vm"
+groups = ["wheel"]

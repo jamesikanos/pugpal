@@ -12,6 +12,7 @@ on:
       platform:
         required: true
         type: choice
+        default: amd64
         options:
           - amd64
           - arm64
@@ -40,7 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        disk-type: ["qcow2", "anaconda-iso"]
+        disk-type: ["qcow2"]  # VM testing only; real installs use the Silverblue ISO + bootc switch
     permissions:
       contents: read
       packages: read
@@ -94,7 +95,7 @@ jobs:
         with:
           path: ${{ steps.build.outputs.output-directory }}
           if-no-files-found: error
-          retention-days: 0
+          retention-days: 3
           compression-level: 0
           overwrite: true
       
