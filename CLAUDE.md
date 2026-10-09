@@ -209,6 +209,18 @@ PugPal is a personal project, not a FieldPal product.
 
 ## Backlog (future work, not started)
 
+- **One-command setup "just for James"** (next up, after the end-to-end VM
+  test). Flow: stock Silverblue -> `sudo bootc switch ghcr.io/jamesikanos/pugpal:latest
+  && systemctl reboot` -> on first login an autostart helper (only if
+  `~/pugpal-dotfiles` is missing) opens a terminal running `ujust pugpal-me`,
+  which: `gh auth login` (browser, one click - the only way into the private
+  repo) -> clone pugpal-dotfiles -> `install.sh` -> restore fan curves
+  (sudo once) -> install Flatpaks (Spotify, Flatseal) -> restart PipeWire ->
+  set hostname -> write a done-marker. Every step idempotent so a re-run
+  resumes. Defaults to James's private repo; others fail at the GitHub login,
+  nothing leaks. **Keep the `/var/home` fstab step manual** - a mistake there
+  logs into an empty home. Test it in a fresh VM.
+
 - **Renovate app**: `.github/renovate.json5` has a custom manager for the
   Quickshell commit pin, but Renovate only runs once the Renovate GitHub app is
   installed on the repo (James's action). Until then, bump `commit` by hand.
