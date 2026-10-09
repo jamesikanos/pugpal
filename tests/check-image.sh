@@ -57,6 +57,7 @@ echo "== no build-time repos left behind"
 check "flatpak exports dir created at boot (DMS launcher sees first Flatpak)" grep -q "/var/lib/flatpak/exports/share/applications" /usr/lib/tmpfiles.d/pugpal-flatpak-exports.conf
 check "pugpal-prune never prunes volumes" bash -c '! grep -E "^[^#]*(--volumes|volume prune)" /usr/libexec/pugpal-prune'
 check "ujust pugpal-clean recipe" grep -q "^pugpal-clean:" /usr/share/ublue-os/just/60-custom.just
+check "inotify limit raised for minikube docker-driver clusters" grep -qE "^fs.inotify.max_user_instances *= *8192" /usr/lib/sysctl.d/60-pugpal.conf
 check "bootc install has a default root fs" grep -q "type = \"btrfs\"" /usr/lib/bootc/install/20-pugpal.toml
 check "no third-party repo files" bash -c '! ls /etc/yum.repos.d/ | grep -Ei "docker|vscode|chrome|1password|proton|steam|copr.*(hyprland|protonplus|coolercontrol|scrcpy)"'
 
