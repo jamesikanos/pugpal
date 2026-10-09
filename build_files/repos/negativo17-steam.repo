@@ -1,0 +1,6 @@
+[fedora-steam]
+name=negativo17 - Steam
+baseurl=https://negativo17.org/repos/steam/fedora-$releasever/$basearch/
+enabled=1
+gpgcheck=1
+gpgkey=https://negativo17.org/repos/RPM-GPG-KEY-slaanesh

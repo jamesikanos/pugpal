@@ -26,6 +26,7 @@ rm -fv \
     /etc/yum.repos.d/vscode.repo \
     /etc/yum.repos.d/google-chrome*.repo \
     /etc/yum.repos.d/1password.repo \
-    /etc/yum.repos.d/protonvpn*.repo
+    /etc/yum.repos.d/protonvpn*.repo \
+    /etc/yum.repos.d/negativo17-steam.repo
 
 dnf5 clean all

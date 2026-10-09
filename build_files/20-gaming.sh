@@ -19,6 +19,7 @@ dnf5 -y install \
     vulkan-tools \
     protonplus
 
-# Steam lives in RPM Fusion nonfree-steam. base-main ships RPM Fusion repo
-# definitions; enable the steam one for this transaction only.
-dnf5 -y install --enablerepo='rpmfusion-nonfree-steam' steam steam-devices
+# Steam comes from negativo17's fedora-steam repo (repos/negativo17-steam.repo).
+# The ublue base already uses negativo17 for multimedia and ships no RPM
+# Fusion, so this keeps a single third-party vendor for the media/gaming stack.
+dnf5 -y install steam steam-devices
