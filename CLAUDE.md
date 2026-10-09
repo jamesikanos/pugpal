@@ -171,12 +171,10 @@ gamemode, MangoHud and gamescope. Addon tooling is documented in
    `/etc/systemd/system`, `/usr/local/bin`, NetworkManager connections,
    `rpm -qa` and `flatpak list`. (Fan curves from `/etc/coolercontrol` are
    already in pugpal-dotfiles `machine/main-pc/`.)
-   **Docker lives on the root disk** (`/var/lib/docker`): images, build
-   cache AND named volumes (data). A reinstall wipes all of it. Before
-   migrating: prune what's disposable (`docker builder prune`,
-   `docker image prune -a`), then carry the volumes over - e.g. move Docker's
-   `data-root` onto the home disk, or `docker run --rm -v VOL:/v -v
-   /home/...:/b alpine tar` each volume. Check `docker system df` first.
+   **Docker lives on the root disk** (`/var/lib/docker`) and a reinstall
+   wipes it. On James's devbox that's fine - **Docker data is disposable**
+   (James, 2026-10-09: nothing permanent runs there; everything can be
+   rebuilt). No volume migration needed.
 2. **Identify disks by UUID, never by name**: NVMe names (`nvme0n1`/`nvme1n1`)
    can swap between boots. Re-run `lsblk -f` right before any disk step.
    Install stock Fedora Silverblue 44 onto the **root disk only**; leave the
