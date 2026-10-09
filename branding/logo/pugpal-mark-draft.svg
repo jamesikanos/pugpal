@@ -1,0 +1,30 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <title>PugPal mark (draft 1)</title>
+  <!--
+    Draft 1. Jesse's face in FieldPal's monogram language: flat fills, hard
+    edges, no gradients or shadows. The head carries the pugs' trademark
+    tilt (-8deg); the tongue is the single FieldPal-orange accent.
+    Palette names refer to branding/palette.toml.
+  -->
+  <rect width="1024" height="1024" fill="#2D2D2D"/>                         <!-- ink_line tile -->
+  <g transform="rotate(-8 512 540)">
+    <!-- head: cream octagon -->
+    <polygon points="330,250 694,250 800,370 800,640 700,800 324,800 224,640 224,370" fill="#f1e4d9"/>
+    <!-- button ears (Vinnie black) folded forward over the head's top corners -->
+    <polygon points="200,330 330,230 450,250 330,330 250,440" fill="#110a09"/>
+    <polygon points="824,330 694,230 574,250 694,330 774,440" fill="#110a09"/>
+    <!-- forehead wrinkle -->
+    <polygon points="430,360 512,320 594,360 594,384 512,346 430,384" fill="#32231f"/>
+    <!-- mask: dark muzzle -->
+    <polygon points="370,470 654,470 720,600 660,760 364,760 304,600" fill="#16171a"/>
+    <!-- eyes -->
+    <circle cx="390" cy="470" r="62" fill="#110a09"/>
+    <circle cx="634" cy="470" r="62" fill="#110a09"/>
+    <rect x="404" y="438" width="22" height="22" fill="#f1e4d9"/>
+    <rect x="648" y="438" width="22" height="22" fill="#f1e4d9"/>
+    <!-- nose -->
+    <polygon points="462,560 562,560 540,600 484,600" fill="#504c4b"/>
+    <!-- tongue: the one orange accent -->
+    <polygon points="488,690 560,690 572,770 540,800 500,790" fill="#ff6b2c"/>
+  </g>
+</svg>
