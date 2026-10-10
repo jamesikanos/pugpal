@@ -46,6 +46,7 @@ check "no package-created group in the user GID range" bash -c '
 
 echo "== sessions"
 check "Hyprland wayland session"  bash -c 'ls /usr/share/wayland-sessions/ | grep -qi hyprland'
+check "plain 'Hyprland' is the uwsm session" bash -c 'grep -qx "Name=Hyprland" /usr/share/wayland-sessions/hyprland-uwsm.desktop && ! grep -qx "Name=Hyprland" /usr/share/wayland-sessions/hyprland.desktop'
 check "GNOME wayland session"     bash -c 'ls /usr/share/wayland-sessions/ | grep -qi gnome'
 
 echo "== services"

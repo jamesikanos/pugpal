@@ -34,3 +34,11 @@ dnf5 -y install \
     kitty \
     wf-recorder \
     swappy
+
+# GDM lists two Hyprland sessions. Only the uwsm one starts
+# graphical-session.target, which xdg-desktop-portal (file pickers, screen
+# sharing, dark mode) needs: on the SSD test the plain one left the portal
+# dead all session. Hiding the plain one isn't possible - uwsm launches that
+# same entry and refuses Hidden ones - so rename both to make the choice obvious.
+sed -i 's/^Name=Hyprland$/Name=Hyprland (no uwsm - fallback)/' /usr/share/wayland-sessions/hyprland.desktop
+sed -i 's/^Name=Hyprland (uwsm-managed)$/Name=Hyprland/' /usr/share/wayland-sessions/hyprland-uwsm.desktop
