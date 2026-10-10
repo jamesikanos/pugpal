@@ -203,7 +203,7 @@ James found a 1 TB Samsung USB-C SSD (~1 GB/s). The drive gets wiped.
    separate `/home` disk unselected. Create the same username (UID 1000).
 3. Add the old home partition to `/etc/fstab` at `/var/home`, reboot.
 4. `sudo bootc switch ghcr.io/jamesikanos/pugpal:latest`, reboot.
-5. Log into the Hyprland (uwsm) session once (Hyprland writes its default
+5. Log into the "Hyprland" session (uwsm - not the "no uwsm - fallback" one) once (Hyprland writes its default
    `hyprland.lua`), then apply the user layer - see pugpal-dotfiles CLAUDE.md:
    `gh repo clone jamesikanos/pugpal-dotfiles ~/pugpal-dotfiles && ~/pugpal-dotfiles/install.sh`
 6. Restore the fan curves: `~/pugpal-dotfiles/machine/main-pc/restore-coolercontrol.sh`.
@@ -291,6 +291,19 @@ PugPal is a personal project, not a FieldPal product.
 ## Troubleshooting log
 
 Dated entries, newest first. What broke, why, what fixed it.
+
+- **2026-10-10** - **First real-hardware session (external SSD).** Mostly fine.
+  Found: (1) GDM's plain "Hyprland" entry (`start-hyprland`) was picked
+  instead of the uwsm one, so `graphical-session.target` never started and
+  `xdg-desktop-portal` failed all session (`Dependency failed`). It can't be
+  hidden (uwsm launches that same entry and refuses `Hidden=true` ones), so
+  `10-desktop.sh` renames them: the uwsm one is now plain "Hyprland", the other
+  "Hyprland (no uwsm - fallback)". (2) No WoW audio until a YouTube video
+  played: the dotfiles' `systemctl --user restart pipewire wireplumber` stops
+  `pipewire-pulse` and doesn't restart it; Chrome socket-activated it at
+  20:39. The dotfiles' `install.sh` now restarts all three itself. (3)
+  Wallpaper only applied on a second `install.sh` run (DMS not running yet on
+  the first) and (4) the monitor came up at 60 Hz - both fixed in the dotfiles.
 
 - **2026-10-09** - **Local builds silently reused a stale layer.** Scripts and
   system files enter the build through a bind mount, which podman's cache
