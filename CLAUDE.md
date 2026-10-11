@@ -52,7 +52,8 @@ system_files/            copied over / at build time
   usr/libexec/pugpal-groups + pugpal-groups.service   wheel users -> docker, libvirt
   usr/libexec/pugpal-setup + pugpal-firstboot.service  first-boot setup on tty1 (see "First boot"); `ujust pugpal-machine`
   usr/bin/vitals-record + vitals-recorder.{service,timer}  30s vitals log for freeze diagnosis
-scripts/install-to-disk.sh  `just install-disk`: bootc install to an external USB disk (picker, serial confirm, --dry-run)
+scripts/install-to-disk.sh  `just install-disk`: bootc install to an external USB disk (picker, serial confirm, --dry-run);
+                         `--internal machine.toml`: the profile's root disk only, never its home disk (migration)
 scripts/vm-console.py    screenshots + typing on the test VM's screen via the QEMU monitor (vm/monitor.sock)
 disk_config/disk.toml    image-builder blueprint for the CI test qcow2 (throwaway pug user)
 branding/                palette.toml, logo SVGs, tools/ (cutout.py, wallpaper.py - run from local/venv-branding)
@@ -224,7 +225,8 @@ James found a 1 TB Samsung USB-C SSD (~1 GB/s). The drive gets wiped.
 1. Back up from the root disk into `/home`: custom units in
    `/etc/systemd/system`, `/usr/local/bin`, NetworkManager connections,
    `rpm -qa` and `flatpak list`. (Fan curves from `/etc/coolercontrol` are
-   already in pugpal-dotfiles `machine/main-pc/`.)
+   already in pugpal-dotfiles `machine/main-pc/`.) James, 2026-10-11: only
+   the fan curves matter (Ethernet, no Wi-Fi; Ollama not wanted).
    **Docker DATA lives on the root disk** (`/var/lib/docker`) and a reinstall
    wipes it. (Docker itself is REQUIRED and ships in the image - docker-ce,
    compose, buildx, enabled, user in the docker group automatically; only the
@@ -233,19 +235,21 @@ James found a 1 TB Samsung USB-C SSD (~1 GB/s). The drive gets wiped.
    rebuilt). No volume migration needed.
 2. **Identify disks by UUID, never by name**: NVMe names (`nvme0n1`/`nvme1n1`)
    can swap between boots. Re-run `lsblk -f` right before any disk step.
-   Boot the Fedora live USB and `bootc install to-disk` PugPal onto the
-   **root disk only** (never the home disk). TODO before this:
-   `install-to-disk.sh` only offers USB disks - it needs an internal-disk
-   mode, with James reviewing it. (Not stock Silverblue + `bootc switch`: an
-   account created there takes UID 1000 and the first-boot setup skips.)
+   Boot the external SSD (PugPal) and run
+   `scripts/install-to-disk.sh --internal ~/pugpal-dotfiles/machine/main-pc/machine.toml`
+   (`--dry-run` first). It accepts only the profile's `root_disk_serial`,
+   refuses the disk holding the profile's home UUID (and stops if that home
+   can't be found), and wants the serial typed. Tested 2026-10-11 in the VM
+   with twin NVMe disks carrying the real serials (dry runs + wrong-serial
+   abort). (Not stock Silverblue + `bootc switch`: an account created there
+   takes UID 1000 and the first-boot setup skips.)
 3. First boot runs the setup (see "First boot"): approve GitHub on the phone,
    confirm `main-pc`, confirm the home disk ("Speedi Boi", shows `james`),
    type the password. It mounts `/var/home` by UUID, reuses UID 1000, sets
    kernel args, restores the fan curves, installs Flatpaks + dotfiles,
    reboots. Log: `/var/log/pugpal-setup.log`.
 4. Log into "Hyprland" (the uwsm one).
-5. Restore Ollama (stays in `/usr/local`, unit in `/etc/systemd/system`).
-6. Check: `cat /proc/cmdline` has the main-pc kargs; PodMic RAW and PodMic
+5. Check: `cat /proc/cmdline` has the main-pc kargs; PodMic RAW and PodMic
    Tuned both appear as inputs; BRIO mic absent; CoolerControl shows the curves.
 
 ## Branding and the look

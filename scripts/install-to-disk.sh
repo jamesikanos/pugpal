@@ -1,23 +1,33 @@
 #!/usr/bin/env bash
-# Install PugPal onto an external USB disk with `bootc install to-disk`.
+# Install PugPal onto a disk with `bootc install to-disk`.
 #   scripts/install-to-disk.sh [--dry-run] [--image REF]
+#   scripts/install-to-disk.sh --internal PROFILE [--dry-run] [--image REF]
 #
-# Lists USB disks only, refuses any disk that holds a mounted system path,
-# and asks you to type the disk's serial before wiping it. The disk is
-# addressed by its /dev/disk/by-id path, never by sdX, so a renamed device
-# can't be hit by mistake. --dry-run goes through the picker and checks and
-# prints the commands, but runs nothing that changes the system (no sudo).
+# Default: lists USB disks only (the external test SSD).
+# --internal PROFILE: a machine's own disk, for migrating it. PROFILE is the
+# machine.toml from the private dotfiles; only the disk whose serial is its
+# [install] root_disk_serial is accepted, and never the disk holding its
+# [home] uuid - if that home filesystem can't be found, it stops. Run it from
+# another system (the SSD), not from the disk being replaced.
+#
+# Both modes refuse any disk that holds a mounted system path and ask you to
+# type the disk's serial before wiping it. The disk is addressed by its
+# /dev/disk/by-id path, never by sdX/nvmeXnY, so a renamed device can't be
+# hit by mistake. --dry-run goes through the checks and prints the commands,
+# but runs nothing that changes the system (no sudo).
 set -euo pipefail
 
 image="ghcr.io/jamesikanos/pugpal:latest"
 dry_run=0
+profile=""
 
-usage() { sed -n '2,10s/^# \{0,1\}//p' "$0"; }
+usage() { sed -n '2,17s/^# \{0,1\}//p' "$0"; }
 
 while (($#)); do
     case "$1" in
         -n|--dry-run) dry_run=1 ;;
         -i|--image)   image="${2:?--image needs a value}"; shift ;;
+        --internal)   profile="${2:?--internal needs the machine.toml}"; shift ;;
         -h|--help)    usage; exit 0 ;;
         *)            echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
     esac
@@ -45,23 +55,56 @@ is_system_disk() {
     return 1
 }
 
-# Stable /dev/disk/by-id path for a whole disk; prefers the usb- link.
+# Stable /dev/disk/by-id path for a whole disk; prefers a link naming the
+# serial (readable), then the usb- link.
 by_id_path() {
-    local dev="$1" link best=""
+    local dev="$1" serial link best=""
+    serial="$(field "$dev" SERIAL)"
     for link in /dev/disk/by-id/*; do
-        [[ $link == *-part* ]] && continue
+        [[ $link == *-part* || $link == *_1 ]] && continue
         [[ $(readlink -f "$link") == "$dev" ]] || continue
-        [[ $link == */usb-* ]] && { echo "$link"; return; }
+        [[ -n $serial && $link == *"$serial" ]] && { echo "$link"; return; }
+        [[ $link == */usb-* ]] && best="$link"
         [[ -z $best ]] && best="$link"
     done
     [[ -n $best ]] && echo "$best"
 }
 
+# Whole disk holding the filesystem with this UUID (empty if none).
+disk_with_uuid() {
+    local part
+    part="$(lsblk -nrp -o NAME,UUID | awk -v u="$1" '$2 == u {print $1; exit}')"
+    [[ -z $part ]] || lsblk -ndp -o PKNAME "$part" | sed 's/ //g'
+}
+
+# ---- internal mode: the profile says which disk ----------------------------
+
+want_serial="" home_uuid="" home_disk=""
+if [[ -n $profile ]]; then
+    [[ -f $profile ]] || die "no such profile: $profile"
+    read -r want_serial home_uuid < <(python3 -c '
+import sys, tomllib
+p = tomllib.load(open(sys.argv[1], "rb"))
+print(p.get("install", {}).get("root_disk_serial", "-"), p.get("home", {}).get("uuid", "-"))' "$profile")
+    [[ $want_serial != - ]] || die "$profile has no [install] root_disk_serial"
+    [[ $home_uuid != - ]] || die "$profile has no [home] uuid; refusing (can't prove which disk is home)"
+    home_disk="$(disk_with_uuid "$home_uuid")"
+    [[ -n $home_disk ]] || die "home filesystem $home_uuid not found; refusing (can't prove which disk is home)"
+    info "home disk (never touched): $home_disk  $(field "$home_disk" MODEL)  serial $(field "$home_disk" SERIAL)"
+    [[ $(field "$home_disk" SERIAL) != "$want_serial" ]] \
+        || die "the profile's root disk serial is the home disk's; fix $profile"
+fi
+
 # ---- pick a disk -----------------------------------------------------------
 
 candidates=() labels=()
 while read -r dev; do
-    [[ $(field "$dev" TRAN) == usb ]] || continue
+    if [[ -n $profile ]]; then
+        [[ $(field "$dev" SERIAL) == "$want_serial" ]] || continue
+        [[ $dev != "$home_disk" ]] || die "$dev is the home disk; refusing"
+    else
+        [[ $(field "$dev" TRAN) == usb ]] || continue
+    fi
     if is_system_disk "$dev"; then
         info "skipping $dev ($(field "$dev" MODEL)): holds a mounted system path"
         continue
@@ -71,16 +114,25 @@ while read -r dev; do
         "$(field "$dev" MODEL)" "$(field "$dev" SERIAL)")")
 done < <(lsblk -dnp -o NAME -e 7,11)   # skip loop, cdrom
 
-((${#candidates[@]})) || die "no eligible USB disks found"
+if [[ -n $profile ]]; then
+    ((${#candidates[@]} == 1)) || die "found ${#candidates[@]} usable disks with serial $want_serial (want exactly 1)"
+else
+    ((${#candidates[@]})) || die "no eligible USB disks found"
+fi
 
 echo
-echo "USB disks:"
-PS3=$'\nInstall PugPal onto which disk? (number, or Ctrl-C to quit) '
-select label in "${labels[@]}"; do
-    [[ -n ${label:-} ]] && break
-    echo "pick a number from the list"
-done
-dev="${candidates[REPLY-1]}"
+[[ -n $profile ]] && echo "The profile's root disk:" || echo "USB disks:"
+if [[ -n $profile ]]; then
+    label="${labels[0]}"; dev="${candidates[0]}"   # exactly one, by serial
+    echo "  $label"
+else
+    PS3=$'\nInstall PugPal onto which disk? (number, or Ctrl-C to quit) '
+    select label in "${labels[@]}"; do
+        [[ -n ${label:-} ]] && break
+        echo "pick a number from the list"
+    done
+    dev="${candidates[REPLY-1]}"
+fi
 
 target="$(by_id_path "$dev")" || true
 [[ -n $target ]] || die "$dev has no /dev/disk/by-id link; refusing to use a bare device name"
@@ -93,6 +145,11 @@ echo "Target:   $target"
 echo
 lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINTS "$dev"
 echo
+if [[ -n $profile ]]; then
+    echo "Kept, not touched (home):"
+    lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINTS "$home_disk"
+    echo
+fi
 
 # ---- confirm ---------------------------------------------------------------
 
@@ -122,6 +179,9 @@ done
 # Re-check right before the wipe: the by-id link must still be the same disk.
 [[ $(readlink -f "$target") == "$dev" && $(field "$dev" SERIAL) == "$serial" ]] \
     || die "$target no longer resolves to the selected disk; aborting"
+if [[ -n $profile ]]; then
+    [[ $(disk_with_uuid "$home_uuid") != "$dev" ]] || die "$dev now holds the home filesystem; aborting"
+fi
 ((dry_run)) || [[ -z $(mounts_of "$dev") ]] || die "$dev still has mounted partitions"
 
 info "installing $image (this pulls the image as root on first run)"
@@ -136,5 +196,6 @@ if ((dry_run)); then
 else
     echo
     lsblk -f "$target"
-    info "done: boot it from the firmware boot menu and pick the USB disk"
+    [[ -n $profile ]] && what="this disk ($serial)" || what="the USB disk"
+    info "done: reboot, and pick $what in the firmware boot menu (F11)"
 fi
