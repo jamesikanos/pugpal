@@ -50,7 +50,7 @@ check "plain 'Hyprland' is the uwsm session" bash -c 'grep -qx "Name=Hyprland" /
 check "GNOME wayland session"     bash -c 'ls /usr/share/wayland-sessions/ | grep -qi gnome'
 
 echo "== services"
-for u in docker.service coolercontrold.service libvirtd.socket vitals-recorder.timer pugpal-groups.service pugpal-prune.timer pugpal-vm-ssh.service kdump.service me.proton.vpn.split_tunneling.service gdm.service; do
+for u in docker.service coolercontrold.service libvirtd.socket vitals-recorder.timer pugpal-groups.service pugpal-firstboot.service pugpal-prune.timer pugpal-vm-ssh.service kdump.service me.proton.vpn.split_tunneling.service gdm.service; do
     check "$u enabled" systemctl is-enabled "$u"
 done
 
@@ -59,10 +59,16 @@ check "flatpak exports dir created at boot (DMS launcher sees first Flatpak)" gr
 check "pugpal-prune never prunes volumes" bash -c '! grep -E "^[^#]*(--volumes|volume prune)" /usr/libexec/pugpal-prune'
 check "ujust pugpal-clean recipe" grep -q "^pugpal-clean:" /usr/share/ublue-os/just/60-custom.just
 check "inotify limit raised for minikube docker-driver clusters" grep -qE "^fs.inotify.max_user_instances *= *8192" /usr/lib/sysctl.d/60-pugpal.conf
-check "stability kargs (C-states, amdgpu runpm) shipped" grep -q "amdgpu.runpm=0" /usr/lib/bootc/kargs.d/20-pugpal-stability.toml
+check "no machine-specific kargs in the image (they're in machine profiles)" bash -c '! ls /usr/lib/bootc/kargs.d/ 2>/dev/null | grep -q pugpal'
 check "freeze kit: lockup panics" grep -q "kernel.softlockup_panic *= *1" /usr/lib/sysctl.d/61-pugpal-freeze-capture.conf
 check "freeze kit: watchdog" grep -q "RuntimeWatchdogSec=120" /usr/lib/systemd/system.conf.d/99-pugpal-watchdog.conf
-check "freeze kit: crashkernel karg" grep -q crashkernel /usr/lib/bootc/kargs.d/30-pugpal-kdump.toml
+check "kdump skipped without a crashkernel karg" grep -qx "ConditionKernelCommandLine=crashkernel" /usr/lib/systemd/system/kdump.service.d/pugpal.conf
+check "first-boot setup parses" python3 -c 'import ast; ast.parse(open("/usr/libexec/pugpal-setup").read())'
+check "first-boot setup runs" /usr/libexec/pugpal-setup --help
+check "first-boot setup uses tty1" grep -qx "TTYPath=/dev/tty1" /usr/lib/systemd/system/pugpal-firstboot.service
+check "uwsm session id the setup sets as default exists" test -f /usr/share/wayland-sessions/hyprland-uwsm.desktop
+check "nmtui for Wi-Fi during setup" command -v nmtui
+check "ujust pugpal-machine recipe" grep -q "^pugpal-machine:" /usr/share/ublue-os/just/60-custom.just
 check "VM-only sshd (never on real hardware)" grep -qx "ConditionVirtualization=vm" /usr/lib/systemd/system/pugpal-vm-ssh.service
 check "sshd itself not enabled" bash -c "! systemctl is-enabled sshd.service >/dev/null 2>&1"
 check "bootc install has a default root fs" grep -q "type = \"btrfs\"" /usr/lib/bootc/install/20-pugpal.toml

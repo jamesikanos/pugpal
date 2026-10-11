@@ -50,8 +50,10 @@ build_files/
   90-cleanup.sh          enable services, remove every build-time repo/COPR
 system_files/            copied over / at build time
   usr/libexec/pugpal-groups + pugpal-groups.service   wheel users -> docker, libvirt
+  usr/libexec/pugpal-setup + pugpal-firstboot.service  first-boot setup on tty1 (see "First boot"); `ujust pugpal-machine`
   usr/bin/vitals-record + vitals-recorder.{service,timer}  30s vitals log for freeze diagnosis
 scripts/install-to-disk.sh  `just install-disk`: bootc install to an external USB disk (picker, serial confirm, --dry-run)
+scripts/vm-console.py    screenshots + typing on the test VM's screen via the QEMU monitor (vm/monitor.sock)
 disk_config/disk.toml    image-builder blueprint for the CI test qcow2 (throwaway pug user)
 branding/                palette.toml, logo SVGs, tools/ (cutout.py, wallpaper.py - run from local/venv-branding)
 dotfiles/                gitignored: the separate PRIVATE pugpal-dotfiles repo (the look)
@@ -63,6 +65,35 @@ local/                   gitignored: machine-specific notes
 **Rule:** a new package goes in the stage that owns its area. A new third-party
 repo gets a file in `build_files/repos/` **and** a removal line in `90-cleanup.sh`;
 a new COPR goes in both COPR lists (`00-repos.sh` and `90-cleanup.sh`).
+
+## First boot (`pugpal-setup`)
+
+On a fresh install (no user account yet) `pugpal-firstboot.service` runs
+`/usr/libexec/pugpal-setup firstboot` on tty1 before GDM: GitHub device-code
+login -> clone pugpal-dotfiles -> recognise the machine from its profile
+(`machine/<name>/machine.toml` in the PRIVATE dotfiles - format in its
+CLAUDE.md) -> offer the profile's home disk (read-only peek, asks, fstab line
+by UUID without `nofail`, mount, verify, undo on failure) -> create the account
+(reuses an existing home's UID/GID; relabels SELinux if unlabeled) -> hostname,
+kernel args (`rpm-ostree kargs`), root scripts (fan curves), Flatpaks ->
+dotfiles `install.sh` as the user -> GDM default session = uwsm Hyprland ->
+reboot if kargs changed. Unknown machine: asks instead and offers to save a
+profile. No network: skip GitHub, finish by hand later. If any human account
+exists it writes `/var/lib/pugpal/setup-done` and does nothing, so existing
+installs (the SSD) never see it. Log: `/var/log/pugpal-setup.log`.
+
+**Machine-specific kernel args are NOT in the image** (no `kargs.d`): they
+live in the machine profile. An installed machine gets them from first boot or
+`ujust pugpal-machine`. kdump is skipped without `crashkernel`.
+
+**It only runs on a fresh `bootc install`** (live USB or `just install-disk`),
+not after `bootc switch` from a Silverblue that already has a user.
+
+Tested 2026-10-11 in the VM (`scripts/vm-console.py` driving tty1, fake board
+via `VM_EXTRA='-smbios type=2,...'`, fake home disk): known machine end to end
+through GDM into Hyprland, unknown machine, no network, existing install
+(no-op), `ujust pugpal-machine`. Not yet exercised: the real GitHub device
+login, Flatpak installs, real hardware.
 
 ## Hard rule: the dev PC is hands-off
 
@@ -173,7 +204,9 @@ James found a 1 TB Samsung USB-C SSD (~1 GB/s). The drive gets wiped.
    sudo exception). It lists USB disks only, targets the /dev/disk/by-id path, and
    wants the serial typed before it runs `bootc install to-disk --wipe`.
 3. Boot it from the F11 menu; create/log in; dotfiles `install.sh`.
-4. Verify: `cat /proc/cmdline` has the stability kargs + crashkernel; CoolerControl
+4. Verify: `cat /proc/cmdline` has the stability kargs + crashkernel (after
+   upgrading to an image without `kargs.d` - 2026-10-11 - bootc drops them:
+   `git -C ~/pugpal-dotfiles pull && ujust pugpal-machine`, reboot); CoolerControl
    sees fans; PodMic RAW/Tuned present, BRIO mic absent; `bootloader-update` OK?;
    recording uses VAAPI.
 5. Copy `~/Games/battlenet` + Lutris config/runners onto the SSD (do NOT mount the
@@ -199,16 +232,20 @@ James found a 1 TB Samsung USB-C SSD (~1 GB/s). The drive gets wiped.
    rebuilt). No volume migration needed.
 2. **Identify disks by UUID, never by name**: NVMe names (`nvme0n1`/`nvme1n1`)
    can swap between boots. Re-run `lsblk -f` right before any disk step.
-   Install stock Fedora Silverblue 44 onto the **root disk only**; leave the
-   separate `/home` disk unselected. Create the same username (UID 1000).
-3. Add the old home partition to `/etc/fstab` at `/var/home`, reboot.
-4. `sudo bootc switch ghcr.io/jamesikanos/pugpal:latest`, reboot.
-5. Log into the "Hyprland" session (uwsm - not the "no uwsm - fallback" one) once (Hyprland writes its default
-   `hyprland.lua`), then apply the user layer - see pugpal-dotfiles CLAUDE.md:
-   `gh repo clone jamesikanos/pugpal-dotfiles ~/pugpal-dotfiles && ~/pugpal-dotfiles/install.sh`
-6. Restore the fan curves: `~/pugpal-dotfiles/machine/main-pc/restore-coolercontrol.sh`.
-7. Restore Ollama (stays in `/usr/local`, unit in `/etc/systemd/system`).
-8. Check: PodMic RAW and PodMic Tuned both appear as inputs; BRIO mic absent.
+   Boot the Fedora live USB and `bootc install to-disk` PugPal onto the
+   **root disk only** (never the home disk). TODO before this:
+   `install-to-disk.sh` only offers USB disks - it needs an internal-disk
+   mode, with James reviewing it. (Not stock Silverblue + `bootc switch`: an
+   account created there takes UID 1000 and the first-boot setup skips.)
+3. First boot runs the setup (see "First boot"): approve GitHub on the phone,
+   confirm `main-pc`, confirm the home disk ("Speedi Boi", shows `james`),
+   type the password. It mounts `/var/home` by UUID, reuses UID 1000, sets
+   kernel args, restores the fan curves, installs Flatpaks + dotfiles,
+   reboots. Log: `/var/log/pugpal-setup.log`.
+4. Log into "Hyprland" (the uwsm one).
+5. Restore Ollama (stays in `/usr/local`, unit in `/etc/systemd/system`).
+6. Check: `cat /proc/cmdline` has the main-pc kargs; PodMic RAW and PodMic
+   Tuned both appear as inputs; BRIO mic absent; CoolerControl shows the curves.
 
 ## Branding and the look
 
@@ -243,29 +280,28 @@ PugPal is a personal project, not a FieldPal product.
 ## Backlog (future work, not started)
 
 - **Second machine: James's laptop on PugPal** (desktop + laptop, same OS,
-  same look, same files). Before it happens: make the desktop-only bits
-  machine-specific - `kargs.d/20-pugpal-stability.toml`
-  (`processor.max_cstate=1` would wreck laptop battery life),
-  `30-pugpal-kdump.toml` and the freeze kit, CoolerControl, PodMic audio. Options: image variants
-  (`pugpal` / `pugpal-laptop`) or per-machine `rpm-ostree kargs`. Check the
+  same look, same files). Kernel args, fan curves and PodMic audio are now
+  per-machine (profiles); first boot on the laptop asks and saves a profile.
+  Still image-wide: the freeze-kit sysctls (`61-pugpal-freeze-capture.conf`,
+  panic on lockup) and the systemd watchdog - decide per machine. Check the
   laptop's GPU (Intel/AMD/NVIDIA) first.
 - **File sync between machines.** James wants Proton Drive, but (Oct 2026) its
   native Linux sync client is announced, not shipped (targeted end of 2026);
   only a CLI exists. Interim options: Syncthing (desktop <-> laptop directly)
   or rclone `bisync` with the Proton Drive backend. Revisit when Proton ships.
 
-- **One-command setup "just for James"** (next up, after the end-to-end VM
-  test). Flow: stock Silverblue -> `sudo bootc switch ghcr.io/jamesikanos/pugpal:latest
-  && systemctl reboot` -> on first login an autostart helper (only if
-  `~/pugpal-dotfiles` is missing) opens a terminal running `ujust pugpal-me`,
-  which: `gh auth login` (browser, one click - the only way into the private
-  repo) -> clone pugpal-dotfiles -> `install.sh` -> restore fan curves
-  (sudo once) -> install Flatpaks (Spotify, Flatseal) -> restart PipeWire ->
-  set hostname -> write a done-marker. Every step idempotent so a re-run
-  resumes. Defaults to James's private repo; others fail at the GitHub login,
-  nothing leaks. **Keep the `/var/home` fstab step manual** - a mistake there
-  logs into an empty home. Test it in a fresh VM.
-
+- **Drop GNOME (after the main PC migration has run a week or two without
+  needing the GNOME session).** Agreed with James 2026-10-11. GNOME only
+  provides: GDM (login), the fallback session, gnome-initial-setup (replaced
+  by pugpal-setup), plus standalone bits we keep (gnome-keyring,
+  xdg-desktop-portal-gtk, Nautilus as an app). Plan: base
+  `silverblue-main` -> `base-main`, login via greetd + the DMS greeter (DMS
+  ships `Modules/Greetd`), fallback = `bootc rollback` + text console.
+  pugpal-setup's "default session" step is GDM/AccountsService-specific -
+  adapt it. One change, VM then SSD first. Upgrading removes GNOME from `/usr`
+  cleanly; `/etc` and `/var` are merged/kept, so check in the VM that
+  `display-manager.service` (a symlink in `/etc`) follows the new image and
+  GDM's leftovers (`/var/lib/gdm`, dconf) are harmless.
 - **Renovate app**: `.github/renovate.json5` has a custom manager for the
   Quickshell commit pin, but Renovate only runs once the Renovate GitHub app is
   installed on the repo (James's action). Until then, bump `commit` by hand.

@@ -1,0 +1,598 @@
+#!/usr/bin/python3
+"""PugPal setup: first boot, and re-applying a machine profile later.
+
+  pugpal-setup firstboot [--force] [--dotfiles-from DIR]
+      Runs once, on tty1 before the login screen (pugpal-firstboot.service):
+      GitHub login -> dotfiles -> recognise the machine -> home disk ->
+      account -> machine profile + dotfiles install -> login screen.
+      Does nothing (and never runs again) if a user account already exists,
+      unless --force. --dotfiles-from skips GitHub (VM tests, offline).
+
+  pugpal-setup machine --dotfiles DIR      (`ujust pugpal-machine`)
+      Re-apply this machine's profile on an installed system: kernel
+      arguments, hostname, root scripts (fan curves).
+
+  pugpal-setup detect --dotfiles DIR
+      Print the matching profile's name (exit 1 if none). Works unprivileged;
+      the dotfiles' install.sh uses it.
+
+Machine profiles live in the PRIVATE dotfiles repo, never in this public
+image: machine/<name>/machine.toml - see that repo's CLAUDE.md for the format.
+"""
+
+import argparse
+import configparser
+import getpass
+import glob
+import json
+import os
+import pwd
+import grp
+import shutil
+import signal
+import subprocess
+import sys
+import time
+import tomllib
+import traceback
+
+DEFAULT_REPO = "jamesikanos/pugpal-dotfiles"
+DONE = "/var/lib/pugpal/setup-done"
+LOG = "/var/log/pugpal-setup.log"
+WORK = "/var/tmp/pugpal-setup"
+SESSION = "hyprland-uwsm"  # GDM session id = wayland-sessions/<id>.desktop
+
+
+# ---------------------------------------------------------------- terminal
+
+def log(msg):
+    try:
+        with open(LOG, "a") as f:
+            f.write(time.strftime("%F %T ") + msg + "\n")
+    except OSError:
+        pass
+
+
+def say(msg=""):
+    print(msg, flush=True)
+    if msg:
+        log(msg)
+
+
+def head(msg):
+    say()
+    say(f"\033[1;38;5;208m== {msg}\033[0m")
+
+
+def ask(prompt, default=""):
+    shown = f" [{default}]" if default else ""
+    answer = input(f"{prompt}{shown}: ").strip()
+    log(f"Q {prompt} -> {answer or default}")
+    return answer or default
+
+
+def yes(prompt, default):
+    hint = "Y/n" if default else "y/N"
+    while True:
+        answer = input(f"{prompt} [{hint}]: ").strip().lower()
+        if not answer:
+            return default
+        if answer in ("y", "yes", "n", "no"):
+            log(f"Q {prompt} -> {answer}")
+            return answer.startswith("y")
+
+
+def run(cmd, **kw):
+    log("$ " + " ".join(cmd))
+    return subprocess.run(cmd, check=True, **kw)
+
+
+def out(cmd):
+    return subprocess.run(cmd, check=True, capture_output=True, text=True).stdout
+
+
+# ---------------------------------------------------------------- machine
+
+def human_users():
+    return [p.pw_name for p in pwd.getpwall() if 1000 <= p.pw_uid < 60000]
+
+
+def board():
+    parts = []
+    for f in ("board_vendor", "board_name"):
+        try:
+            parts.append(open(f"/sys/class/dmi/id/{f}").read().strip())
+        except OSError:
+            pass
+    return " ".join(p for p in parts if p)
+
+
+def block_devices():
+    """Flat list of block devices with their whole-disk parent."""
+    tree = json.loads(out(["lsblk", "-J", "-p", "-o",
+                           "NAME,UUID,FSTYPE,LABEL,SIZE,MODEL,SERIAL,TRAN,TYPE,MOUNTPOINTS"]))
+    flat = []
+
+    def walk(dev, disk):
+        disk = disk or dev
+        flat.append(dict(dev, disk=disk["name"], disk_model=disk.get("model") or "",
+                         disk_tran=disk.get("tran") or ""))
+        for child in dev.get("children", []):
+            walk(child, disk)
+
+    for dev in tree["blockdevices"]:
+        walk(dev, None)
+    return flat
+
+
+def boot_disk(devs):
+    src = out(["findmnt", "-n", "-o", "SOURCE", "/sysroot"]).strip() or \
+        out(["findmnt", "-n", "-o", "SOURCE", "/"]).strip()
+    src = src.split("[")[0]
+    for d in devs:
+        if d["name"] == src:
+            return d["disk"]
+    return None
+
+
+def load_profiles(dotfiles):
+    profiles = {}
+    for path in sorted(glob.glob(os.path.join(dotfiles, "machine", "*", "machine.toml"))):
+        name = os.path.basename(os.path.dirname(path))
+        try:
+            with open(path, "rb") as f:
+                profiles[name] = dict(tomllib.load(f), _dir=os.path.dirname(path))
+        except (OSError, tomllib.TOMLDecodeError) as e:
+            say(f"  skipping {path}: {e}")
+    return profiles
+
+
+def matches(profile, devs):
+    m = profile.get("match", {})
+    if not m:
+        return False
+    if "board" in m and m["board"] != board():
+        return False
+    uuids = {d.get("uuid") for d in devs}
+    return all(u in uuids for u in m.get("disks", []))
+
+
+def detect(profiles, devs):
+    found = [n for n, p in profiles.items() if matches(p, devs)]
+    return found[0] if len(found) == 1 else None
+
+
+# ---------------------------------------------------------------- steps
+
+def wait_for_network():
+    for _ in range(12):
+        if subprocess.run(["curl", "-sfI", "--max-time", "5", "https://github.com"],
+                          capture_output=True).returncode == 0:
+            return True
+        time.sleep(5)
+    return False
+
+
+def get_dotfiles(args):
+    """Return a path to a dotfiles checkout, or None (skipped)."""
+    dest = os.path.join(WORK, "dotfiles")
+    shutil.rmtree(dest, ignore_errors=True)
+    if args.dotfiles_from:
+        shutil.copytree(args.dotfiles_from, dest, symlinks=True)
+        say(f"Dotfiles copied from {args.dotfiles_from}.")
+        return dest
+
+    head("1. GitHub: your dotfiles")
+    while not wait_for_network():
+        say("No connection to github.com.")
+        choice = ask("[r]etry, [w]i-fi setup, or [s]kip GitHub (setup asks everything instead)", "r")
+        if choice.startswith("w") and shutil.which("nmtui"):
+            subprocess.run(["nmtui", "connect"])
+        elif choice.startswith("s"):
+            return None
+
+    repo = ask("Dotfiles repository (or 'skip')", DEFAULT_REPO)
+    if repo == "skip":
+        return None
+    env = dict(os.environ, GH_CONFIG_DIR=os.path.join(WORK, "gh"), BROWSER="true")
+    os.makedirs(env["GH_CONFIG_DIR"], mode=0o700, exist_ok=True)
+    while True:
+        if subprocess.run(["gh", "auth", "status"], env=env, capture_output=True).returncode != 0:
+            say("GitHub shows a one-time code below. On your phone, open")
+            say("  github.com/login/device")
+            say("type the code and approve. (Press Enter when gh asks to open a browser.)")
+            subprocess.run(["gh", "auth", "login", "--hostname", "github.com",
+                            "--git-protocol", "https", "--web", "--insecure-storage"], env=env)
+        if subprocess.run(["gh", "repo", "clone", repo, dest, "--", "--quiet"], env=env).returncode == 0:
+            say("Dotfiles downloaded.")
+            return dest
+        shutil.rmtree(dest, ignore_errors=True)
+        if not yes("Couldn't download them. Try again?", True):
+            return None
+
+
+def pick_profile(profiles, devs):
+    name = detect(profiles, devs)
+    if name and yes(f"This looks like '{name}'. Use its profile?", True):
+        return name, profiles[name]
+    if profiles:
+        say(f"Profiles in the dotfiles: {', '.join(profiles)}")
+        choice = ask("Use one of them anyway? (name, or Enter for none)")
+        if choice in profiles:
+            return choice, profiles[choice]
+    return None, {}
+
+
+def peek(dev):
+    """Mount read-only and describe the top level: (summary, {dir: uid})."""
+    mnt = os.path.join(WORK, "peek")
+    os.makedirs(mnt, exist_ok=True)
+    # Truly read-only: plain "ro" still replays a dirty journal (a write).
+    opts = {"ext4": "ro,noload", "xfs": "ro,norecovery", "btrfs": "ro,rescue=nologreplay"}
+    run(["mount", "-t", dev["fstype"], "-o", opts.get(dev["fstype"], "ro"), dev["name"], mnt],
+        capture_output=True)
+    try:
+        owners = {}
+        for entry in sorted(os.listdir(mnt)):
+            p = os.path.join(mnt, entry)
+            if os.path.isdir(p) and not os.path.islink(p) and entry != "lost+found":
+                owners[entry] = os.stat(p).st_uid
+        st = os.statvfs(mnt)
+        used = (st.f_blocks - st.f_bfree) * st.f_frsize / 1e9
+        folders = ", ".join(f"{d} (owner {u})" for d, u in owners.items()) or "no folders"
+        return f"{folders}; {used:.0f} GB used", owners
+    finally:
+        run(["umount", mnt])
+
+
+def describe(dev):
+    bits = [dev["disk_model"].strip() or dev["disk"], dev["size"], dev["fstype"]]
+    if dev.get("label"):
+        bits.append(f'"{dev["label"]}"')
+    if dev["disk_tran"]:
+        bits.append(dev["disk_tran"])
+    return " - ".join(b for b in bits if b) + f"  (UUID {dev['uuid']})"
+
+
+def choose_home(profile, devs):
+    """Pick a separate home disk; returns the device dict or None."""
+    head("3. Home disk")
+    root = boot_disk(devs)
+    candidates = [d for d in devs if d["disk"] != root and d.get("uuid")
+                  and d.get("fstype") in ("ext4", "xfs", "btrfs")
+                  and not any(d.get("mountpoints") or [])]
+    want = profile.get("home", {}).get("uuid")
+    if want and any(d["uuid"] == want and "/var/home" in (d.get("mountpoints") or []) for d in devs):
+        say("The profile's home disk is already mounted at /var/home.")
+        return None
+    if want:
+        dev = next((d for d in candidates if d["uuid"] == want), None)
+        if dev:
+            summary, _ = peek(dev)
+            say(f"The profile's home disk: {describe(dev)}")
+            say(f"  contains: {summary}")
+            if yes("Use it as /home? (No = start with an empty home on this disk)", False):
+                return dev
+            return None
+        say(f"The profile's home disk ({want}) isn't connected.")
+    if not candidates:
+        say("No other disks with a Linux filesystem - home stays on this disk.")
+        return None
+    say("Use an existing home disk? Nothing is ever formatted. Disks other than the one PugPal runs from:")
+    for i, d in enumerate(candidates, 1):
+        try:
+            summary, _ = peek(d)
+        except subprocess.CalledProcessError:
+            summary = "could not be mounted"
+        say(f"  {i}) {describe(d)}")
+        say(f"     contains: {summary}")
+    choice = ask("Number, or Enter for none (home stays on this disk)")
+    if choice.isdigit() and 1 <= int(choice) <= len(candidates):
+        return candidates[int(choice) - 1]
+    return None
+
+
+def mount_home(dev, user):
+    """Add the fstab line, mount, and check the user's folder is there."""
+    _, owners = peek(dev)
+    line = f"UUID={dev['uuid']} /var/home {dev['fstype']} defaults 0 {2 if dev['fstype'] == 'ext4' else 0}\n"
+    with open("/etc/fstab") as f:
+        fstab = f.read()
+    if dev["uuid"] not in fstab:
+        with open("/etc/fstab", "a") as f:
+            f.write(f"# PugPal setup: separate home disk (no nofail - a missing disk must stop the boot,\n"
+                    f"# not log you into an empty home)\n{line}")
+    run(["systemctl", "daemon-reload"])
+
+    def undo(why):
+        subprocess.run(["umount", "/var/home"], capture_output=True)
+        with open("/etc/fstab", "w") as f:
+            f.write(fstab)
+        run(["systemctl", "daemon-reload"])
+        raise RuntimeError(f"{why}; home disk unmounted and /etc/fstab restored")
+
+    try:
+        if not os.path.ismount("/var/home"):
+            run(["mount", "/var/home"])
+    except subprocess.CalledProcessError:
+        undo("mounting the home disk failed")
+    if user in owners and not os.path.isdir(f"/var/home/{user}"):
+        undo(f"/var/home/{user} wasn't there after mounting")
+    say(f"Home disk mounted at /var/home ({dev['uuid']}).")
+
+
+def create_account(profile):
+    head("4. Your account")
+    u = profile.get("user", {})
+    name = ask("Username", u.get("name", "james"))
+    home = f"/var/home/{name}"
+    shell = u.get("shell", "/bin/bash")
+    try:
+        pwd.getpwnam(name)
+        say(f"Account '{name}' already exists - keeping it.")
+        return pwd.getpwnam(name)
+    except KeyError:
+        pass
+    cmd = ["useradd", "-G", "wheel", "-s", shell, "-d", home]
+    if u.get("full_name"):
+        cmd += ["-c", u["full_name"]]
+    if os.path.isdir(home):
+        st = os.stat(home)
+        uid, gid = st.st_uid, st.st_gid
+        say(f"Reusing the existing {home} (user {uid}, group {gid}).")
+        cmd += ["-M"]
+        # A disk from another Fedora keeps its SELinux labels; one without
+        # them (unlabeled_t) would block the login.
+        if "unlabeled_t" in out(["ls", "-Zd", home]):
+            say("Its files have no SELinux labels - labelling them (can take a while)...")
+            run(["restorecon", "-R", home])
+        # The files on that disk belong to this number: it must be exactly this.
+        try:
+            taken = pwd.getpwuid(uid).pw_name
+            raise RuntimeError(f"user number {uid} (owner of {home}) is already used by '{taken}'")
+        except KeyError:
+            pass
+        try:
+            grp.getgrgid(gid)
+        except KeyError:
+            run(["groupadd", "-g", str(gid), name])
+        cmd += ["-u", str(uid), "-g", str(gid)]
+    else:
+        cmd += ["-m"]
+        uid = u.get("uid", 1000)
+        try:
+            pwd.getpwuid(uid)  # taken: let useradd pick
+        except KeyError:
+            cmd += ["-u", str(uid)]
+    run(cmd + [name])
+    while True:
+        pw = getpass.getpass(f"Password for {name}: ")
+        if pw and pw == getpass.getpass("Same password again: "):
+            break
+        say("Empty, or they didn't match - again.")
+    subprocess.run(["chpasswd"], input=f"{name}:{pw}\n", text=True, check=True)
+    log("password set")
+    subprocess.run(["/usr/libexec/pugpal-groups"], check=False)  # docker, libvirt
+    return pwd.getpwnam(name)
+
+
+def default_session(user):
+    path = f"/var/lib/AccountsService/users/{user}"
+    cfg = configparser.ConfigParser(interpolation=None)
+    cfg.optionxform = str
+    cfg.read(path)
+    if not cfg.has_section("User"):
+        cfg.add_section("User")
+    cfg["User"]["Session"] = SESSION
+    cfg["User"].setdefault("SystemAccount", "false")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        cfg.write(f, space_around_delimiters=False)
+
+
+def set_hostname(name):
+    if subprocess.run(["hostnamectl", "set-hostname", name]).returncode != 0:
+        with open("/etc/hostname", "w") as f:
+            f.write(name + "\n")
+    say(f"Hostname: {name}")
+
+
+def next_boot_kargs():
+    # The deployment that boots next (a staged one if there is one).
+    return out(["rpm-ostree", "kargs"]).split()
+
+
+def apply_machine(name, profile):
+    """System side of a profile. Returns True if a reboot is needed."""
+    reboot = False
+    if profile.get("hostname"):
+        set_hostname(profile["hostname"])
+    kargs = profile.get("kernel", {}).get("kargs", [])
+    missing = [k for k in kargs if k not in next_boot_kargs()]
+    if missing:
+        run(["rpm-ostree", "kargs"] + [f"--append-if-missing={k}" for k in missing])
+        say(f"Kernel arguments added (after a reboot): {' '.join(missing)}")
+        reboot = True
+    for script in profile.get("setup", {}).get("root_scripts", []):
+        path = os.path.join(profile["_dir"], script)
+        say(f"Running {name}/{script}")
+        if subprocess.run(["bash", path], cwd=profile["_dir"]).returncode != 0:
+            say(f"  {script} failed - run it again later")
+    os.makedirs("/etc/pugpal", exist_ok=True)
+    with open("/etc/pugpal/machine", "w") as f:
+        f.write(name + "\n")
+    return reboot
+
+
+def as_user(user, cmd, **kw):
+    env = {"HOME": user.pw_dir, "USER": user.pw_name, "LOGNAME": user.pw_name,
+           "SHELL": user.pw_shell, "PATH": "/usr/local/bin:/usr/bin:/bin", "LANG": "C.UTF-8"}
+    env.update(kw.pop("env", {}))
+    return subprocess.run(["runuser", "-u", user.pw_name, "--", "env", "-i"]
+                          + [f"{k}={v}" for k, v in env.items()] + cmd, **kw)
+
+
+def install_dotfiles(user, staged, machine):
+    head("5. Applying your setup")
+    target = os.path.join(user.pw_dir, "pugpal-dotfiles")
+    if os.path.isdir(target):
+        say(f"{target} already exists - using it as is.")
+    else:
+        shutil.copytree(staged, target, symlinks=True)
+        run(["chown", "-R", f"{user.pw_uid}:{user.pw_gid}", target])
+        say(f"Dotfiles in {target}.")
+    gh_src = os.path.join(WORK, "gh")
+    gh_dst = os.path.join(user.pw_dir, ".config", "gh")
+    if os.path.exists(os.path.join(gh_src, "hosts.yml")) and not os.path.exists(gh_dst):
+        shutil.copytree(gh_src, gh_dst)
+        run(["chown", "-R", f"{user.pw_uid}:{user.pw_gid}", os.path.dirname(gh_dst)])
+        as_user(user, ["gh", "auth", "setup-git"])  # git push works too
+        say("GitHub login kept for your account.")
+
+    apps = []
+    try:
+        apps = [line.strip() for line in open(os.path.join(target, "flatpaks.txt"))
+                if line.strip() and not line.startswith("#")]
+    except OSError:
+        pass
+    missing = [a for a in apps if subprocess.run(["flatpak", "info", a], capture_output=True).returncode]
+    if missing:
+        say(f"Installing {len(missing)} Flatpak app(s)...")
+        if subprocess.run(["flatpak", "install", "--system", "-y", "--noninteractive",
+                           "flathub"] + missing).returncode:
+            say("  some Flatpaks failed - `ujust` or re-running install.sh retries them")
+
+    r = as_user(user, ["bash", os.path.join(target, "install.sh")],
+                env={"PUGPAL_SKIP_FLATPAKS": "1", "PUGPAL_FIRSTBOOT": "1",
+                     "PUGPAL_MACHINE": machine or ""})
+    if r.returncode:
+        say("install.sh failed - after logging in, run ~/pugpal-dotfiles/install.sh")
+
+
+def save_profile(user, devs, home_dev):
+    target = os.path.join(user.pw_dir, "pugpal-dotfiles")
+    if not os.path.isdir(os.path.join(target, ".git")):
+        return
+    head("Save this machine")
+    say(f"Board: {board() or 'unknown'}")
+    name = ask("Save these answers as a machine profile so next time is automatic? Name (Enter = no)")
+    if not name:
+        return
+    lines = [f"# {name}: written by PugPal's first-boot setup on {time.strftime('%F')}.",
+             f'hostname = "{os.uname().nodename}"', "", "[match]", f'board = "{board()}"', ""]
+    if home_dev:
+        lines += ["[home]", f'uuid = "{home_dev["uuid"]}"', ""]
+    lines += ["[user]", f'name = "{user.pw_name}"', f'shell = "{user.pw_shell}"', ""]
+    d = os.path.join(target, "machine", name)
+    as_user(user, ["mkdir", "-p", d], check=True)
+    as_user(user, ["tee", os.path.join(d, "machine.toml")], input="\n".join(lines),
+            text=True, stdout=subprocess.DEVNULL, check=True)
+    git = ["git", "-C", target]
+    as_user(user, git + ["add", f"machine/{name}"])
+    as_user(user, git + ["commit", "-q", "-m", f"feat(machine): {name} profile from first-boot setup"])
+    if as_user(user, git + ["push", "-q"], env={"GIT_TERMINAL_PROMPT": "0"}).returncode == 0:
+        say(f"Profile '{name}' saved and pushed.")
+    else:
+        say(f"Profile '{name}' committed; push it later from ~/pugpal-dotfiles.")
+
+
+# ---------------------------------------------------------------- commands
+
+def mark_done():
+    os.makedirs(os.path.dirname(DONE), exist_ok=True)
+    open(DONE, "a").close()
+
+
+def firstboot(args):
+    if not args.force and (os.path.exists(DONE) or human_users()):
+        mark_done()  # an existing system: never run
+        return 0
+    printk = None
+    try:
+        subprocess.run(["plymouth", "quit"], capture_output=True)
+        os.kill(1, signal.SIGRTMIN + 21)  # systemd: stop printing status on the console
+        with open("/proc/sys/kernel/printk") as f:
+            printk = f.read().split()
+        with open("/proc/sys/kernel/printk", "w") as f:
+            f.write("1")  # nor the kernel: only emergencies over the prompts
+        os.makedirs(WORK, mode=0o700, exist_ok=True)
+        say("\033[2J\033[H")
+        say("\033[1mPugPal setup\033[0m - a few questions, then the login screen.")
+        staged = get_dotfiles(args)
+        devs = block_devices()
+        head("2. This machine")
+        name, profile = pick_profile(load_profiles(staged), devs) if staged else (None, {})
+        if not name:
+            say("No machine profile - asking instead.")
+        home_dev = choose_home(profile, devs)
+        if home_dev:
+            mount_home(home_dev, profile.get("user", {}).get("name", "james"))
+        user = create_account(profile)
+        if not profile.get("hostname"):
+            set_hostname(ask("Computer name", f"{user.pw_name}-pugpal"))
+        default_session(user.pw_name)
+        reboot = apply_machine(name, profile) if name else False
+        if staged:
+            install_dotfiles(user, staged, name)
+            if not name:
+                save_profile(user, devs, home_dev)
+        else:
+            say("Dotfiles skipped. To add them later, logged in, in a terminal:")
+            say(f"  gh auth login && gh repo clone {DEFAULT_REPO} ~/pugpal-dotfiles && ~/pugpal-dotfiles/install.sh")
+        mark_done()
+        shutil.rmtree(WORK, ignore_errors=True)
+        head("Done")
+        if reboot:
+            say("Rebooting in 10 seconds to apply the kernel settings...")
+            time.sleep(10)
+            subprocess.run(["systemctl", "reboot"])
+        else:
+            say("Starting the login screen. Pick 'Hyprland'.")
+            time.sleep(3)
+        return 0
+    except (Exception, KeyboardInterrupt) as e:
+        log("FAILED:\n" + traceback.format_exc())
+        say(f"\nSetup stopped: {e}")
+        say(f"Log: {LOG}. Without a PugPal account, GNOME's own setup creates one;")
+        say("reboot to run PugPal setup again.")
+        time.sleep(15)
+        return 1
+    finally:
+        os.kill(1, signal.SIGRTMIN + 20)
+        if printk:
+            with open("/proc/sys/kernel/printk", "w") as f:
+                f.write(printk[0])
+
+
+def machine(args):
+    profiles = load_profiles(args.dotfiles)
+    name, profile = pick_profile(profiles, block_devices())
+    if not name:
+        say("No profile chosen.")
+        return 1
+    if apply_machine(name, profile):
+        say("Reboot to apply the kernel settings.")
+    return 0
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = p.add_subparsers(dest="cmd", required=True)
+    fb = sub.add_parser("firstboot")
+    fb.add_argument("--force", action="store_true", help="run even if users exist (testing)")
+    fb.add_argument("--dotfiles-from", help="use this dotfiles checkout instead of GitHub")
+    for cmd in ("machine", "detect"):
+        sub.add_parser(cmd).add_argument("--dotfiles", required=True)
+    args = p.parse_args()
+    if args.cmd == "detect":
+        name = detect(load_profiles(args.dotfiles), block_devices())
+        if name:
+            print(name)
+        return 0 if name else 1
+    if os.geteuid() != 0:
+        sys.exit("pugpal-setup: run as root")
+    return firstboot(args) if args.cmd == "firstboot" else machine(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

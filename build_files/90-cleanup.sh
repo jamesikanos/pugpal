@@ -10,6 +10,7 @@ systemctl enable \
     libvirtd.socket \
     vitals-recorder.timer \
     pugpal-groups.service \
+    pugpal-firstboot.service \
     pugpal-prune.timer \
     pugpal-vm-ssh.service \
     kdump.service \

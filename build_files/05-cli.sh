@@ -4,12 +4,14 @@
 # zsh is James's LOGIN SHELL - without it the account can't log in after
 # `bootc switch`. oh-my-zsh, .zshrc and plugins live in /home and carry over.
 # git: not in the ublue base, and the dotfiles install needs it.
+# NetworkManager-tui: nmtui, for Wi-Fi in the text-mode first-boot setup.
 
 set -euxo pipefail
 
 dnf5 -y install \
     zsh \
     git \
+    NetworkManager-tui \
     fastfetch \
     bat \
     yq \

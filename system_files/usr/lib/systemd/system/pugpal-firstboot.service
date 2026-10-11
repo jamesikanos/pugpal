@@ -1,0 +1,24 @@
+[Unit]
+Description=PugPal first-boot setup (machine profile, home disk, account)
+Documentation=https://github.com/jamesikanos/pugpal
+# Before the login screen and the tty1 login prompt; it needs tty1 to itself.
+After=systemd-user-sessions.service systemd-vconsole-setup.service plymouth-start.service NetworkManager.service pugpal-groups.service
+Before=display-manager.service getty@tty1.service
+# Runs once. The script also exits at once (and writes this file) when a user
+# account already exists, so existing installs never see it.
+ConditionPathExists=!/var/lib/pugpal/setup-done
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutSec=0
+ExecStart=/usr/libexec/pugpal-setup firstboot
+StandardInput=tty
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+
+[Install]
+WantedBy=graphical.target
