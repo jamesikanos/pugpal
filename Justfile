@@ -499,6 +499,8 @@ fetch-disk:
     ls -lh output/qcow2/disk.qcow2
 
 # Boot the test VM (user QEMU, SSH on localhost:2222). display=none = headless; e.g. just vm gtk 12 32G for the e2e suites
+# QEMU monitor on vm/monitor.sock (scripts/vm-console.py: screenshots, typing). VM_EXTRA adds QEMU args,
+# e.g. a fake board for machine-profile tests: VM_EXTRA='-smbios type=2,manufacturer=X,product=Y'
 [group('PugPal')]
 vm display="gtk" cpus="4" mem="8G":
     #!/usr/bin/env bash
@@ -516,13 +518,17 @@ vm display="gtk" cpus="4" mem="8G":
     fi
     if [[ "{{ display }}" == none ]]; then
         gfx=(-device virtio-vga -display none)
+    elif [[ "{{ display }}" == headless-gl ]]; then
+        gfx=(-device virtio-vga-gl -display egl-headless)  # GPU-accelerated, no window; see it via vm-console.py shot
     else
         gfx=(-device virtio-vga-gl -display gtk,gl=on)
     fi
     exec qemu-system-x86_64 "${accel[@]}" -machine q35 -smp {{ cpus }} -m {{ mem }} \
         "${gfx[@]}" \
         -drive file=vm/overlay.qcow2,if=virtio,format=qcow2 \
-        -nic user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:2222-:22
+        -nic user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:2222-:22 \
+        -monitor unix:vm/monitor.sock,server,nowait \
+        ${VM_EXTRA:-}
 
 # SSH into the running test VM as the throwaway pug user
 [group('PugPal')]
