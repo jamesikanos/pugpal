@@ -78,7 +78,8 @@ by UUID without `nofail`, mount, verify, undo on failure) -> create the account
 kernel args (`rpm-ostree kargs`), root scripts (fan curves), Flatpaks ->
 dotfiles `install.sh` as the user -> GDM default session = uwsm Hyprland ->
 reboot if kargs changed. Unknown machine: asks instead and offers to save a
-profile. No network: skip GitHub, finish by hand later. If any human account
+profile. No network: skip GitHub, finish by hand later. Running from a USB disk (the SSD) it never offers
+any other disk as home, so the real `/home` can't be mounted by a test install. If any human account
 exists it writes `/var/lib/pugpal/setup-done` and does nothing, so existing
 installs (the SSD) never see it. Log: `/var/log/pugpal-setup.log`.
 

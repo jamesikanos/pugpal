@@ -65,6 +65,7 @@ check "freeze kit: watchdog" grep -q "RuntimeWatchdogSec=120" /usr/lib/systemd/s
 check "kdump skipped without a crashkernel karg" grep -qx "ConditionKernelCommandLine=crashkernel" /usr/lib/systemd/system/kdump.service.d/pugpal.conf
 check "first-boot setup parses" python3 -c 'import ast; ast.parse(open("/usr/libexec/pugpal-setup").read())'
 check "first-boot setup runs" /usr/libexec/pugpal-setup --help
+check "first-boot setup never offers internal disks from a USB install" grep -q "running from a USB disk" /usr/libexec/pugpal-setup
 check "first-boot setup uses tty1" grep -qx "TTYPath=/dev/tty1" /usr/lib/systemd/system/pugpal-firstboot.service
 check "uwsm session id the setup sets as default exists" test -f /usr/share/wayland-sessions/hyprland-uwsm.desktop
 check "nmtui for Wi-Fi during setup" command -v nmtui

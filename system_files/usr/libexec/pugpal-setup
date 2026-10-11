@@ -258,7 +258,12 @@ def choose_home(profile, devs):
     """Pick a separate home disk; returns the device dict or None."""
     head("3. Home disk")
     root = boot_disk(devs)
-    candidates = [d for d in devs if d["disk"] != root and d.get("uuid")
+    if any(d["name"] == root and d["disk_tran"] == "usb" for d in devs):
+        # A test install on an external disk (the SSD): the machine's own
+        # disks, real /home included, are never offered.
+        say("PugPal is running from a USB disk - home stays on it; the internal disks are left alone.")
+        return None
+    candidates =[d for d in devs if d["disk"] != root and d.get("uuid")
                   and d.get("fstype") in ("ext4", "xfs", "btrfs")
                   and not any(d.get("mountpoints") or [])]
     want = profile.get("home", {}).get("uuid")
