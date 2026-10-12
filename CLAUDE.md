@@ -328,6 +328,32 @@ PugPal is a personal project, not a FieldPal product.
 - **Chrome: image vs Flatpak** - undecided. Image Chrome updates only on reboot
   but keeps 1Password desktop integration; Flatpak updates live but 1Password
   doesn't officially support sandboxed browsers. Leaning image + regular reboots.
+- **Phone/watch approval for sudo and polkit** (idea, 2026-10-12). A privilege
+  prompt buzzes James's phone or Galaxy Watch, which shows the actual command;
+  he approves there instead of typing the password. Design sketch:
+  - **PC:** a PAM module (covers sudo, pkexec and DMS's polkit prompts) that
+    talks over a Unix socket to a small root daemon owning BLE via BlueZ
+    D-Bus - keep BLE out of the sudo process. Challenge = random nonce + host
+    + user + command + timestamp; the PC verifies the signature against the
+    public key stored at pairing. The BLE link is untrusted; the signature is
+    the security.
+  - **Phone (Android):** Keystore key gated by `BiometricPrompt`
+    (`AUTH_BIOMETRIC_STRONG`, so not PIN), signs the challenge. Holds the BLE
+    link to the PC via the companion-device API (survives background limits).
+  - **Watch (Galaxy Watch, Wear OS):** no fingerprint sensor, so the Apple
+    Watch model - key requires a recent screen-lock auth, the watch locks when
+    taken off the wrist, approve = a tap. The phone relays the request over the
+    Wear OS Data Layer (direct watch BLE fights background limits and battery).
+    Either device can approve.
+  - **Rules:** always show the command; PAM `sufficient` with ~15 s timeout,
+    then password fallback (never a lockout - test the escape hatch first);
+    decide whether remote SSH sudo may prompt.
+  - **Image:** module + daemon under `/usr`; enable via a custom authselect
+    profile opted into per machine (profile step), not by editing
+    `/etc/pam.d/sudo` (3-way merged). Prototype in the VM first.
+  - Prior art: Krypton (krypt.co, defunct) for the phone design. Off-the-shelf
+    alternative: YubiKey Bio + `pam-u2f` (libfido2 can't use a phone's hybrid
+    passkey transport, which is why this needs building).
 
 ## Troubleshooting log
 
