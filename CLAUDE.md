@@ -49,7 +49,7 @@ build_files/
   40-apps.sh             Chrome, 1Password, CoolerControl, OBS, ProtonVPN; onepassword sysusers
   90-cleanup.sh          enable services, remove every build-time repo/COPR
 system_files/            copied over / at build time
-  usr/libexec/pugpal-groups + pugpal-groups.service   wheel users -> docker, libvirt
+  usr/libexec/pugpal-groups + pugpal-groups.service   wheel users -> docker, libvirt; applies changed fixed GIDs
   usr/libexec/pugpal-setup + pugpal-firstboot.service  first-boot setup on tty1 (see "First boot"); `ujust pugpal-machine`
   usr/bin/vitals-record + vitals-recorder.{service,timer}  30s vitals log for freeze diagnosis
 scripts/install-to-disk.sh  `just install-disk`: bootc install to an external USB disk (picker, serial confirm, --dry-run);
@@ -153,11 +153,16 @@ bootc status
    binaries (`1Password-BrowserSupport`, `/usr/bin/op`, `1password-mcp`) whose
    scriptlets run a plain `groupadd` - which allocated GIDs **1000-1002**, the
    user range, colliding with the real user's own group (GID 1000). `40-apps.sh`
-   now pre-creates them as system groups with **fixed GIDs 921/922/923**, and
+   now pre-creates them with **fixed GIDs 1500/1501/1502**, and
    `system_files/usr/lib/sysusers.d/pugpal.conf` declares the same GIDs (plus
    `docker`) so deployed systems recreate them even though `/etc/group` is
-   three-way-merged on upgrade. Never change those numbers on an installed
-   system. `bootc container lint` flags any new group missing from sysusers.d.
+   three-way-merged on upgrade. They **must be >= 1000**: the 1Password app
+   rejects a helper whose group is a system GID (`invalid group attempted to
+   connect` / `PipeAuthError(NoCreds)` in `~/.config/1Password/logs`) - they
+   were 921-923 at first and browser integration was dead. sysusers never
+   renumbers an existing group, so `pugpal-groups` applies a changed GID from
+   pugpal.conf to `/etc/group` at boot (`groupmod -g`). `bootc container lint`
+   flags any new group missing from sysusers.d.
 4. **No dnf at runtime.** All repos are removed in `90-cleanup.sh`. The system
    updates by pulling new images. For one-offs: Distrobox, or (sparingly)
    `rpm-ostree install`.
@@ -333,6 +338,17 @@ PugPal is a personal project, not a FieldPal product.
 
 Dated entries, newest first. What broke, why, what fixed it.
 
+- **2026-10-12** - **1Password extension never connected to the desktop app**
+  on PugPal (worked on the old install). The app logged
+  `invalid group attempted to connect, rejecting remote` +
+  `PipeAuthError(NoCreds)` for every `1Password-BrowserSupport` connection,
+  although the helper ran setgid `onepassword` correctly (egid 921). Cause:
+  the app only trusts its groups at GID >= 1000 (the old install's scriptlet
+  `onepassword` was GID 1001 - why it worked there). The 2026-10-09 fix moved
+  them to 921-923. Now 1500-1502; `pugpal-groups` renumbers `/etc/group` on
+  installed machines at boot. Debug tip: a setgid process's `/proc/PID/exe`
+  is unreadable, so match helpers by `Name:` in `/proc/PID/status`.
+
 - **2026-10-10** - **First real-hardware session (external SSD).** Mostly fine.
   Found: (1) GDM's plain "Hyprland" entry (`start-hyprland`) was picked
   instead of the uwsm one, so `graphical-session.target` never started and
@@ -408,7 +424,7 @@ Dated entries, newest first. What broke, why, what fixed it.
 - **2026-10-09** - 1Password's scriptlets created `onepassword`,
   `onepassword-cli`, `onepassword-mcp` at **GIDs 1000-1002** - the user range -
   so `/usr/bin/op` would have been setgid to the real user's own group. Now
-  fixed system GIDs 921-923 via sysusers.d (see gotcha 3). Note: rpm runs
+  fixed GIDs via sysusers.d (921-923 then; 1500-1502 since 2026-10-12, see gotcha 3). Note: rpm runs
   systemd-sysusers mid-build, so sysusers.d entries shipped in `system_files`
   take effect *before* later stages' packages install.
 - **2026-10-09** - The dev PC had **SVM disabled in the BIOS** (`SVM disabled

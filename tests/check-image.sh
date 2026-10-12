@@ -37,12 +37,12 @@ check "chrome binary"                  test -x /opt/google/chrome/chrome
 check "1Password binary"               test -x /opt/1Password/1password
 check "1Password helper is setgid"     test -g /opt/1Password/1Password-BrowserSupport
 for f in /opt/1Password/1Password-BrowserSupport /usr/bin/op /opt/1Password/1password-mcp; do
-    check "$f setgid group matches sysusers GID (system range)" bash -c '
+    check "$f setgid group matches sysusers GID (>= 1000, 1Password requires it)" bash -c '
         grp=$(stat -c %G "$1"); gid=$(stat -c %g "$1")
-        [[ $gid -lt 1000 ]] && grep -Eq "^g +${grp} +${gid}\$" /usr/lib/sysusers.d/pugpal.conf' _ "$f"
+        [[ $gid -gt 1000 ]] && grep -Eq "^g +${grp} +${gid}\$" /usr/lib/sysusers.d/pugpal.conf' _ "$f"
 done
-check "no package-created group in the user GID range" bash -c '
-    ! awk -F: "\$3>=1000 && \$3<60000" /etc/group | grep -q .'
+check "no package-created group in the user GID range (bar the fixed 1Password ones)" bash -c '
+    ! awk -F: "\$3>=1000 && \$3<60000 && \$1 !~ /^onepassword(-cli|-mcp)?\$/" /etc/group | grep -q .'
 
 echo "== sessions"
 check "Hyprland wayland session"  bash -c 'ls /usr/share/wayland-sessions/ | grep -qi hyprland'

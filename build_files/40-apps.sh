@@ -8,14 +8,15 @@
 set -euxo pipefail
 
 # 1Password's RPM scriptlets `groupadd` their setgid groups only if missing,
-# and a plain groupadd lands in the user range (1000+), colliding with the
-# first real user's own group. Pre-create them as system groups with the fixed
-# GIDs declared in system_files/usr/lib/sysusers.d/pugpal.conf. rpm usually
+# and a plain groupadd takes the next user GID (1000), colliding with the
+# first real user's own group. Pre-create them with the fixed GIDs declared in
+# system_files/usr/lib/sysusers.d/pugpal.conf (>= 1000, which the 1Password
+# app requires, but clear of the first users' own groups). rpm usually
 # runs systemd-sysusers during earlier stages, which already creates them from
 # that file, so only add what's missing - and fail loudly on a wrong GID.
-for spec in onepassword:921 onepassword-cli:922 onepassword-mcp:923; do
+for spec in onepassword:1500 onepassword-cli:1501 onepassword-mcp:1502; do
     name=${spec%%:*} gid=${spec##*:}
-    getent group "$name" >/dev/null || groupadd -r -g "$gid" "$name"
+    getent group "$name" >/dev/null || groupadd -g "$gid" "$name"
     [[ "$(getent group "$name" | cut -d: -f3)" == "$gid" ]]
 done
 
