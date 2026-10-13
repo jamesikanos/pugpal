@@ -1,5 +1,5 @@
 [Unit]
-Description=Add wheel users to docker and libvirt groups
+Description=Fix up fixed-GID groups; add wheel users to docker and libvirt
 After=systemd-sysusers.service
 Before=systemd-user-sessions.service
 

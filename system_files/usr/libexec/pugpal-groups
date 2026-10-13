@@ -1,11 +1,28 @@
 #!/usr/bin/bash
-# Put interactive (wheel) users into the docker and libvirt groups.
+# Renumber fixed-GID groups that changed in the image, and put interactive
+# (wheel) users into the docker and libvirt groups.
 #
 # On an image-based system, groups created by RPM scriptlets at build time can
 # end up only in /usr/lib/group (read via nss-altfiles). `usermod -aG` edits
 # /etc/group and fails for a group that isn't there, so copy the group line
 # across first. Idempotent; runs on every boot and is cheap.
 set -euo pipefail
+
+# Fixed-GID groups (sysusers.d/pugpal.conf). /etc/group survives upgrades and
+# sysusers never renumbers an existing group, so when the image changes one of
+# these GIDs (the 1Password groups moved 921-923 -> 1500-1502), apply it here.
+# The setgid binaries in /usr already carry the new number; only the name
+# mapping in /etc/group is stale. A failure is logged and the rest still runs.
+while read -r type name gid _; do
+    [[ $type == g && $gid =~ ^[0-9]+$ ]] || continue
+    cur=$(getent group "$name" | cut -d: -f3) || continue
+    [[ -n $cur && $cur != "$gid" ]] || continue
+    if groupmod -g "$gid" "$name"; then
+        echo "pugpal-groups: renumbered ${name} ${cur} -> ${gid}"
+    else
+        echo "pugpal-groups: could not renumber ${name} ${cur} -> ${gid}" >&2
+    fi
+done < /usr/lib/sysusers.d/pugpal.conf
 
 for group in docker libvirt; do
     if ! grep -q "^${group}:" /etc/group; then
