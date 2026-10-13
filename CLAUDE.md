@@ -8,7 +8,8 @@ Vinnie (black) and Jesse (fawn).
 
 **The look and personal config live in a separate PRIVATE repo:**
 [jamesikanos/pugpal-dotfiles](https://github.com/jamesikanos/pugpal-dotfiles)
-(cloned here as the gitignored `dotfiles/`). Its CLAUDE.md has the install
+(the live clone is `~/pugpal-dotfiles` - `install.sh` links into it; edit there,
+not a copy). Its CLAUDE.md has the install
 steps. This repo = the OS image; that repo = the user layer on top.
 
 **This repo is public.** Nothing secret or machine-specific goes in it: no keys,
@@ -57,7 +58,6 @@ scripts/install-to-disk.sh  `just install-disk`: bootc install to an external US
 scripts/vm-console.py    screenshots + typing on the test VM's screen via the QEMU monitor (vm/monitor.sock)
 disk_config/disk.toml    image-builder blueprint for the CI test qcow2 (throwaway pug user)
 branding/                palette.toml, logo SVGs, tools/ (cutout.py, wallpaper.py - run from local/venv-branding)
-dotfiles/                gitignored: the separate PRIVATE pugpal-dotfiles repo (the look)
 .githooks/pre-commit     gitleaks secret scan (enable: git config core.hooksPath .githooks)
 .tools/                  gitignored: just, cosign, gitleaks binaries
 local/                   gitignored: machine-specific notes
@@ -259,7 +259,7 @@ James found a 1 TB Samsung USB-C SSD (~1 GB/s). The drive gets wiped.
 
 ## Branding and the look
 
-The look lives in the **private** `dotfiles/` repo (gitignored here): Hyprland
+The look lives in the **private** dotfiles repo (`~/pugpal-dotfiles`): Hyprland
 `pugpal.lua` (starts DMS, keybinds) + `pugpal-look.lua` (orange active border,
 6px rounding, no shadows, slight blur), the DMS custom theme `pugpal.json` (dark =
 Vinnie, light = Jesse) with `cornerRadius: 6` and IBM Plex fonts, a kitty
