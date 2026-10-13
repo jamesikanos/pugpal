@@ -338,6 +338,19 @@ PugPal is a personal project, not a FieldPal product.
 
 Dated entries, newest first. What broke, why, what fixed it.
 
+- **2026-10-13** - **`bootloader-update` fails on every install (VM, SSD, main
+  PC)**, so shim/GRUB on the ESP never update: `bootupctl: Parsing
+  "/sysroot/.bootc-aleph.json": invalid type: null, expected a string`.
+  Not an image-builder artifact (the 2026-10-09 guess). Cause: CI's rechunk
+  (`rpm-ostree compose build-chunked-oci --rootfs`) builds a new image from
+  the filesystem alone and dropped every label, incl.
+  `org.opencontainers.image.version`; `bootc install` writes the aleph
+  `version` from it (null), and bootupd >= 0.3 requires a string. Fixed in
+  `just ostree-rechunk` (copies the source labels). Machines installed
+  before keep the null aleph - needs a one-off fix per machine. Harmless
+  with Secure Boot off; with it on, a revoked old shim/GRUB on the ESP
+  would stop the machine booting.
+
 - **2026-10-12** - **1Password extension never connected to the desktop app**
   on PugPal (worked on the old install). The app logged
   `invalid group attempted to connect, rejecting remote` +
@@ -401,7 +414,7 @@ Dated entries, newest first. What broke, why, what fixed it.
   sudo, 1Password GIDs 921-923 correct, all PugPal units active. Known
   failures: `mcelog` (no MCE in VMs - harmless) and `bootloader-update`
   (`bootupctl: Parsing "/sysroot/.bootc-aleph.json": invalid type: null`) -
-  probably an artifact of image-builder's install path; re-check on the SSD.
+  not image-builder after all: see 2026-10-13 (rechunk dropped the labels).
   SSH is off by default (Silverblue). Fixed later the same day:
   `pugpal-vm-ssh.service` starts sshd only when `ConditionVirtualization=vm`.
 - **2026-10-09** - **`just vm-ssh` ran part of a command on the dev PC.**
