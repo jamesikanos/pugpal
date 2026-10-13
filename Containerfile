@@ -16,6 +16,28 @@ RUN --mount=type=cache,dst=/var/cache \
         /tmp/quickshell.spec && \
     mkdir -p /out && cp /rpmbuild/RPMS/*/quickshell-*.rpm /out/
 
+# whisper.cpp's whisper-cli with the Vulkan backend: GPU speech-to-text for
+# pugrec's transcripts (AMD via RADV, no ROCm/CUDA). Not packaged in Fedora.
+# Static ggml, so only the binary is carried over. GGML_NATIVE=OFF: CI's CPU is
+# not ours; x86-64-v3 (AVX2/FMA) for the CPU fallback instead.
+FROM ghcr.io/ublue-os/silverblue-main:44 AS whisper-builder
+ARG WHISPER_VERSION=1.9.4
+ARG WHISPER_SHA256=57e280cee375ab02425b806ad5146b99f6eb9357e3c2b31357c8a6af2e2e44ae
+RUN --mount=type=cache,dst=/var/cache \
+    dnf5 -y install --setopt=install_weak_deps=False \
+        cmake gcc-c++ make vulkan-headers vulkan-loader-devel glslc spirv-headers-devel && \
+    curl -fsSL -o /tmp/whisper.tar.gz \
+        "https://github.com/ggml-org/whisper.cpp/archive/refs/tags/v${WHISPER_VERSION}.tar.gz" && \
+    echo "${WHISPER_SHA256}  /tmp/whisper.tar.gz" | sha256sum -c - && \
+    mkdir /src && tar -xzf /tmp/whisper.tar.gz -C /src --strip-components=1 && \
+    cmake -S /src -B /src/build -DCMAKE_BUILD_TYPE=Release \
+        -DGGML_VULKAN=ON -DBUILD_SHARED_LIBS=OFF -DGGML_NATIVE=OFF \
+        -DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON \
+        -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_EXAMPLES=ON && \
+    cmake --build /src/build -j"$(nproc)" --target whisper-cli && \
+    mkdir -p /out && install -m 755 /src/build/bin/whisper-cli /out/whisper-cli && \
+    install -m 644 /src/LICENSE /out/LICENSE
+
 # Universal Blue silverblue-main: base-main (Fedora Atomic + codecs + ublue
 # tooling) plus stock GNOME/GDM, which is PugPal's fallback session next to
 # Hyprland. Plain base-main has no desktop at all. Pinned to the Fedora major;
@@ -36,6 +58,7 @@ ARG CTX_HASH=unset
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=bind,from=quickshell-builder,source=/out,target=/rpms/quickshell \
+    --mount=type=bind,from=whisper-builder,source=/out,target=/bins/whisper \
     --mount=type=cache,dst=/var/cache \
     --mount=type=cache,dst=/var/log \
     --mount=type=tmpfs,dst=/tmp \

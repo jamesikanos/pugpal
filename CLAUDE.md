@@ -29,12 +29,13 @@ in the gitignored `local/machine.md`.
 | Lutris as an **RPM**, not Flatpak | The Flatpak keeps data under `~/.var/app`; the RPM keeps the existing `~/.config/lutris`, `~/.local/share/lutris/runners` (GE-Proton) and the WoW prefix in `~/Games` working untouched. |
 | Steam from negativo17 `fedora-steam` | The base ships negativo17 multimedia and **no RPM Fusion** (the template's comment claiming otherwise is stale). One vendor, no codec-stack mixing. |
 | Docker CE, not podman-docker | **Required** - James's devbox workflow. Existing compose workflows expect the real daemon; Podman is still there. Enabled at boot, wheel users auto-added to `docker`. |
+| pugrec's tools in the image, pugrec in the dotfiles | pugrec (James's demo recorder, private repo `jamesikanos/pugrec`) needs whisper-cli (Vulkan) and DeepFilterNet's `deep-filter`, neither in Fedora. Built/pinned here so no distrobox is needed; everything else it calls (wf-recorder, ffmpeg av1_vaapi, python3-evdev, pkexec, quickshell, pactl) was already in the image. The code, its `.venv` and the speech model are installed per user by the dotfiles' `install.sh` (`pugrec setup`). |
 | Immutable `/opt` (`rm /opt && mkdir /opt`) | Fedora atomic symlinks `/opt -> /var/opt`; files an RPM writes there at build time are lost on deploy. Chrome and 1Password install to `/opt`. Side effect: `/opt` is read-only at runtime - put user-installed stuff in `~/.local` or `/usr/local` (= `/var/usrlocal`, writable). |
 
 ## Layout
 
 ```
-Containerfile            FROM silverblue-main:44, immutable /opt, runs build.sh, bootc lint
+Containerfile            builder stages (quickshell RPM, whisper-cli), FROM silverblue-main:44, immutable /opt, runs build.sh, bootc lint
 image-template.env       IMAGE_NAME=pugpal, REPO_ORGANIZATION=jamesikanos
 Justfile                 upstream template recipes (build, rechunk, qcow2, vm)
 build_files/
@@ -43,7 +44,7 @@ build_files/
   00-repos.sh            installs repo files, enables COPRs
   quickshell/quickshell.spec  our Quickshell RPM (pinned commit), built in the Containerfile's builder stage
   05-cli.sh              zsh (login shell!), git, everyday CLI tools (from the package audit)
-  10-desktop.sh          Hyprland + Wayland tools, wf-recorder, swappy
+  10-desktop.sh          Hyprland + Wayland tools, wf-recorder, swappy; whisper-cli + deep-filter for pugrec
   15-shell.sh            our Quickshell RPM + DankMaterialShell (avengemedia COPRs, this stage only) + brand fonts
   20-gaming.sh           Lutris, Steam, gamescope, gamemode, MangoHud, 32-bit Mesa, ProtonPlus
   30-dev.sh              Docker CE, VS Code, libvirt/QEMU, neovim, gh, adb, scrcpy

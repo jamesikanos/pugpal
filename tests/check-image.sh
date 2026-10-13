@@ -29,6 +29,9 @@ check "no avengemedia COPR left" bash -c '! ls /etc/yum.repos.d/ | grep -qi aven
 for p in wf-recorder swappy grim slurp; do check "$p (screenshots/recording)" rpm -q "$p"; done
 for p in zsh git fastfetch bat yq jq tmux ripgrep nmap plocate nodejs22 nodejs22-npm helm kubernetes1.35-client azure-cli minikube v4l-utils rocminfo; do check "$p" rpm -q "$p"; done
 check "zsh at /bin/zsh (James's login shell)" test -x /bin/zsh
+check "whisper-cli runs (pugrec transcripts)" bash -c 'whisper-cli --help 2>&1 | grep -q usage'
+check "whisper-cli has the Vulkan backend" bash -c 'ldd /usr/bin/whisper-cli | grep -q libvulkan'
+check "deep-filter runs (pugrec audio clean-up)" deep-filter --version
 check "hyprland pinned to 0.56" bash -c 'rpm -q --qf "%{VERSION}" hyprland | grep -q "^0\.56"'
 
 echo "== /opt is a real directory with the /opt apps in it"

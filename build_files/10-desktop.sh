@@ -42,3 +42,16 @@ dnf5 -y install \
 # same entry and refuses Hidden ones - so rename both to make the choice obvious.
 sed -i 's/^Name=Hyprland$/Name=Hyprland (no uwsm - fallback)/' /usr/share/wayland-sessions/hyprland.desktop
 sed -i 's/^Name=Hyprland (uwsm-managed)$/Name=Hyprland/' /usr/share/wayland-sessions/hyprland-uwsm.desktop
+
+# Speech-to-text and voice clean-up for pugrec (the demo recorder, installed in
+# the user layer): whisper-cli (Vulkan, built in the Containerfile's
+# whisper-builder stage) and DeepFilterNet's static deep-filter binary, pinned
+# by checksum. Neither is in Fedora. pugrec finds both on PATH; its
+# Python/model files stay per user (~/.cache/pugrec).
+install -m 755 /bins/whisper/whisper-cli /usr/bin/whisper-cli
+install -Dm 644 /bins/whisper/LICENSE /usr/share/licenses/whisper-cpp/LICENSE
+df_version=0.5.6
+curl -fsSL -o /usr/bin/deep-filter \
+    "https://github.com/Rikorose/DeepFilterNet/releases/download/v${df_version}/deep-filter-${df_version}-x86_64-unknown-linux-musl"
+echo "70775e251eee44c0f2451a1e833326cf8bcbbe304d3e7cd12851e6fce72ef7da  /usr/bin/deep-filter" | sha256sum -c -
+chmod 755 /usr/bin/deep-filter
