@@ -182,6 +182,10 @@ bootc status
   has the new release (`$releasever` in repo files), build, test in the VM.
 - **Hyprland:** change `'hyprland-0.56*'` in `10-desktop.sh` after the user
   config is migrated; test in the VM first.
+- **Any bump of Hyprland, xdg-desktop-portal-hyprland or DMS** (incl. the
+  daily build picking up a new release): check the dotfiles' CLAUDE.md
+  "Workarounds to unwind" table - some config there only exists to dodge an
+  upstream bug and should go once the fix ships.
 
 ## WoW / Lutris constraints
 
