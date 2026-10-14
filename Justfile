@@ -176,6 +176,20 @@ ostree-rechunk $target_image=image_name $tag=default_tag:
 
     GRAPHROOT="$(podman info --format '{{ '{{.Store.GraphRoot}}' }}')"
 
+    # build-chunked-oci builds a new image from the rootfs alone, so the
+    # source image's labels would be lost - among them
+    # org.opencontainers.image.version, which bootc install writes into
+    # /sysroot/.bootc-aleph.json. Without it the file says "version": null
+    # and bootupd (bootloader-update.service) fails to parse it on every boot,
+    # so shim/GRUB never get updated. Carry the labels over; ostree.* and
+    # containers.bootc are set by the chunker itself.
+    LABEL_ARGS=()
+    while IFS= read -r kv; do
+        case "${kv%%=*}" in ''|ostree.*|containers.bootc) continue ;; esac
+        LABEL_ARGS+=(--label "${kv}")
+    done < <(podman image inspect "localhost/${target_image}:${tag}" \
+        --format '{{ '{{range $k, $v := .Labels}}{{$k}}={{$v}}{{"\n"}}{{end}}' }}')
+
     podman run --rm --pull=never --privileged \
       --mount=type=image,src="${target_image}:${tag}",target=/rpm-ostree \
       --mount=type=bind,src=${GRAPHROOT},target=/run/host-container-storage,rw \
@@ -187,6 +201,7 @@ ostree-rechunk $target_image=image_name $tag=default_tag:
       --format-version=2 \
       --bootc \
       --rootfs /rpm-ostree \
+      "${LABEL_ARGS[@]}" \
       --output "containers-storage:[overlay@/run/host-container-storage+/run/rpm-ostree-storage]localhost/${target_image}:${tag}"
 
 # Generate Default Tag
