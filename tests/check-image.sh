@@ -20,6 +20,7 @@ for p in hyprland hyprlock hypridle xdg-desktop-portal-hyprland uwsm waybar kitt
          google-chrome-stable 1password 1password-cli coolercontrol coolercontrold obs-studio proton-vpn-gnome-desktop; do
     check "$p" rpm -q "$p"
 done
+check "no kernel-devel (bcc uses kheaders; it never matched the kernel anyway)" bash -c '! rpm -q kernel-devel'
 check "no system wine (Lutris uses GE-Proton runners)" bash -c '! rpm -q wine-core'
 for p in dms dms-cli dgop matugen ibm-plex-sans-fonts ibm-plex-mono-fonts; do check "$p" rpm -q "$p"; done
 check "quickshell is PugPal's own build" bash -c 'rpm -q --qf "%{RELEASE}" quickshell | grep -q pugpal'
