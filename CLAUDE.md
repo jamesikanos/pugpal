@@ -44,7 +44,7 @@ build_files/
   repos/*.repo           third-party repo definitions (copied in, removed at the end)
   00-repos.sh            installs repo files, enables COPRs
   quickshell/quickshell.spec  our Quickshell RPM (pinned commit), built in the Containerfile's builder stage
-  05-cli.sh              zsh (login shell!), git, everyday CLI tools (from the package audit)
+  05-cli.sh              zsh (login shell!), git, restic, everyday CLI tools (from the package audit)
   10-desktop.sh          Hyprland + Wayland tools, wf-recorder, swappy; whisper-cli + deep-filter for pugrec
   15-shell.sh            our Quickshell RPM + DankMaterialShell (avengemedia COPRs, this stage only) + brand fonts
   20-gaming.sh           Lutris, Steam, gamescope, gamemode, MangoHud, 32-bit Mesa, ProtonPlus
