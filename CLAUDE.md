@@ -44,7 +44,7 @@ build_files/
   repos/*.repo           third-party repo definitions (copied in, removed at the end)
   00-repos.sh            installs repo files, enables COPRs
   quickshell/quickshell.spec  our Quickshell RPM (pinned commit), built in the Containerfile's builder stage
-  05-cli.sh              zsh (login shell!), git, everyday CLI tools (from the package audit)
+  05-cli.sh              zsh (login shell!), git, restic, everyday CLI tools (from the package audit)
   10-desktop.sh          Hyprland + Wayland tools, wf-recorder, swappy; whisper-cli + deep-filter for pugrec
   15-shell.sh            our Quickshell RPM + DankMaterialShell (avengemedia COPRs, this stage only) + brand fonts
   20-gaming.sh           Lutris, Steam, gamescope, gamemode, MangoHud, 32-bit Mesa, ProtonPlus
@@ -80,7 +80,8 @@ login -> clone pugpal-dotfiles -> recognise the machine from its profile
 CLAUDE.md) -> offer the profile's home disk (read-only peek, asks, fstab line
 by UUID without `nofail`, mount, verify, undo on failure) -> create the account
 (reuses an existing home's UID/GID; relabels SELinux if unlabeled) -> hostname,
-kernel args (`rpm-ostree kargs`), root scripts (fan curves), Flatpaks ->
+kernel args (`rpm-ostree kargs`), data disks (`[[mounts]]`: fstab by UUID, always
+`nofail`, an existing UUID line is left alone), root scripts (fan curves), Flatpaks ->
 dotfiles `install.sh` as the user -> GDM default session = uwsm Hyprland ->
 reboot if kargs changed. Unknown machine: asks instead and offers to save a
 profile. No network: skip GitHub, finish by hand later. Running from a USB disk (the SSD) it never offers

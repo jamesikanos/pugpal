@@ -10,7 +10,8 @@
 
   pugpal-setup machine --dotfiles DIR      (`ujust pugpal-machine`)
       Re-apply this machine's profile on an installed system: kernel
-      arguments, hostname, root scripts (fan curves).
+      arguments, hostname, extra data disks ([[mounts]]), root scripts
+      (fan curves).
 
   pugpal-setup detect --dotfiles DIR
       Print the matching profile's name (exit 1 if none). Works unprivileged;
@@ -407,6 +408,49 @@ def next_boot_kargs():
     return out(["rpm-ostree", "kargs"]).split()
 
 
+def apply_mounts(profile):
+    """Extra data disks ([[mounts]]): fstab line by UUID, mount point, mount.
+
+    Always nofail with a short device timeout - unlike the home disk, a
+    missing data disk must not stop the boot. A UUID already in fstab is left
+    as it is (it may have been added by hand). Idempotent.
+    """
+    mounts = profile.get("mounts", [])
+    if not mounts:
+        return
+    with open("/etc/fstab") as f:
+        fstab = f.read()
+    added = []
+    for m in mounts:
+        uuid = m["uuid"]
+        path = os.path.realpath(m["path"])  # /mnt -> /var/mnt on atomic Fedora
+        os.makedirs(path, exist_ok=True)
+        if f"UUID={uuid}" in fstab:
+            continue
+        opts = [o for o in m.get("options", "").split(",") if o and o != "defaults"]
+        if "nofail" not in opts:
+            opts.append("nofail")
+        if not any(o.startswith("x-systemd.device-timeout=") for o in opts):
+            opts.append("x-systemd.device-timeout=10s")
+        added.append(f"# PugPal setup: {m.get('name', path)} (data disk, nofail)\n"
+                     f"UUID={uuid} {path} {m.get('fstype', 'auto')} {','.join(opts)} 0 0\n")
+    if added:
+        with open("/etc/fstab", "a") as f:
+            f.writelines(added)
+        run(["systemctl", "daemon-reload"])
+    for m in mounts:
+        path = os.path.realpath(m["path"])
+        name = m.get("name", path)
+        if os.path.ismount(path):
+            say(f"{name}: mounted at {path}")
+        elif not os.path.exists(f"/dev/disk/by-uuid/{m['uuid']}"):
+            say(f"{name}: disk not connected - `sudo mount {path}` once it is, or reboot")
+        elif subprocess.run(["mount", path]).returncode == 0:
+            say(f"{name}: mounted at {path}")
+        else:
+            say(f"{name}: mounting {path} failed - see `journalctl -b | grep -i mount`")
+
+
 def apply_machine(name, profile):
     """System side of a profile. Returns True if a reboot is needed."""
     reboot = False
@@ -418,6 +462,7 @@ def apply_machine(name, profile):
         run(["rpm-ostree", "kargs"] + [f"--append-if-missing={k}" for k in missing])
         say(f"Kernel arguments added (after a reboot): {' '.join(missing)}")
         reboot = True
+    apply_mounts(profile)
     for script in profile.get("setup", {}).get("root_scripts", []):
         path = os.path.join(profile["_dir"], script)
         say(f"Running {name}/{script}")

@@ -27,7 +27,7 @@ check "LSP LADSPA plugins (PodMic Tuned filter-chain)" test -f /usr/lib64/ladspa
 check "Archivo font installed" bash -c 'fc-list | grep -qi archivo'
 check "no avengemedia COPR left" bash -c '! ls /etc/yum.repos.d/ | grep -qi avengemedia'
 for p in wf-recorder swappy grim slurp; do check "$p (screenshots/recording)" rpm -q "$p"; done
-for p in zsh git fastfetch bat yq jq tmux ripgrep nmap plocate nodejs22 nodejs22-npm helm kubernetes1.35-client azure-cli minikube v4l-utils rocminfo; do check "$p" rpm -q "$p"; done
+for p in zsh git fastfetch bat yq jq tmux ripgrep nmap plocate nodejs22 nodejs22-npm helm kubernetes1.35-client azure-cli minikube v4l-utils rocminfo restic; do check "$p" rpm -q "$p"; done
 check "zsh at /bin/zsh (James's login shell)" test -x /bin/zsh
 check "whisper-cli runs (pugrec transcripts)" bash -c 'whisper-cli --help 2>&1 | grep -q usage'
 check "whisper-cli has the Vulkan backend" bash -c 'ldd /usr/bin/whisper-cli | grep -q libvulkan'

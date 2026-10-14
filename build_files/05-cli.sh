@@ -5,6 +5,8 @@
 # `bootc switch`. oh-my-zsh, .zshrc and plugins live in /home and carry over.
 # git: not in the ublue base, and the dotfiles install needs it.
 # NetworkManager-tui: nmtui, for Wi-Fi in the text-mode first-boot setup.
+# restic: snapshot backups of the home disk (the job itself is per-machine, in
+# the dotfiles' machine profile).
 
 set -euxo pipefail
 
@@ -26,5 +28,6 @@ dnf5 -y install \
     unoconv \
     v4l-utils \
     uvcdynctrl \
-    rocminfo
+    rocminfo \
+    restic
 # (jq, ripgrep, tmux, htop already come with the base image.)
