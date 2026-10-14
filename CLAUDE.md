@@ -30,6 +30,7 @@ in the gitignored `local/machine.md`.
 | Steam from negativo17 `fedora-steam` | The base ships negativo17 multimedia and **no RPM Fusion** (the template's comment claiming otherwise is stale). One vendor, no codec-stack mixing. |
 | Docker CE, not podman-docker | **Required** - James's devbox workflow. Existing compose workflows expect the real daemon; Podman is still there. Enabled at boot, wheel users auto-added to `docker`. |
 | pugrec's tools in the image, pugrec in the dotfiles | pugrec (James's demo recorder, private repo `jamesikanos/pugrec`) needs whisper-cli (Vulkan) and DeepFilterNet's `deep-filter`, neither in Fedora. Built/pinned here so no distrobox is needed; everything else it calls (wf-recorder, ffmpeg av1_vaapi, python3-evdev, pkexec, quickshell, pactl) was already in the image. The code, its `.venv` and the speech model are installed per user by the dotfiles' `install.sh` (`pugrec setup`). |
+| v4l2loopback from ublue **akmods**, tag matched to the base kernel | Prebuilt kmods (no akmod/compiler in the image). They fit one exact kernel, so the Justfile reads the base image's `ostree.linux` label and passes `AKMODS_IMAGE=...:main-44-<kernel>`; a mismatch fails the build at `dnf install` instead of shipping a module that won't load. |
 | Immutable `/opt` (`rm /opt && mkdir /opt`) | Fedora atomic symlinks `/opt -> /var/opt`; files an RPM writes there at build time are lost on deploy. Chrome and 1Password install to `/opt`. Side effect: `/opt` is read-only at runtime - put user-installed stuff in `~/.local` or `/usr/local` (= `/var/usrlocal`, writable). |
 
 ## Layout
@@ -54,6 +55,8 @@ system_files/            copied over / at build time
   usr/libexec/pugpal-groups + pugpal-groups.service   wheel users -> docker, libvirt; applies changed fixed GIDs
   usr/libexec/pugpal-setup + pugpal-firstboot.service  first-boot setup on tty1 (see "First boot"); `ujust pugpal-machine`
   usr/bin/vitals-record + vitals-recorder.{service,timer}  30s vitals log for freeze diagnosis
+  usr/lib/modprobe.d/99-pugpal-v4l2loopback.conf  virtual cameras: /dev/video42 "PugPal Cam" (dotfiles' pugcam), /dev/video43 OBS
+  usr/lib/tmpfiles.d/pugpal-pugcam.conf  /var/lib/pugcam (wheel-writable): pugcam's PyTorch venv + models, off /home
 scripts/install-to-disk.sh  `just install-disk`: bootc install to an external USB disk (picker, serial confirm, --dry-run);
                          `--internal machine.toml`: the profile's root disk only, never its home disk (migration)
 scripts/vm-console.py    screenshots + typing on the test VM's screen via the QEMU monitor (vm/monitor.sock)

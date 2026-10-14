@@ -34,6 +34,12 @@ check "whisper-cli has the Vulkan backend" bash -c 'ldd /usr/bin/whisper-cli | g
 check "deep-filter runs (pugrec audio clean-up)" deep-filter --version
 check "hyprland pinned to 0.56" bash -c 'rpm -q --qf "%{VERSION}" hyprland | grep -q "^0\.56"'
 
+echo "== virtual cameras"
+check "v4l2loopback module for the image's kernel" bash -c 'modinfo -k "$(ls /usr/lib/modules | head -1)" v4l2loopback'
+check "v4l2loopback loads at boot" test -f /usr/lib/modules-load.d/v4l2loopback.conf
+check "PugPal Cam at /dev/video42" grep -qE '^options v4l2loopback .*video_nr=42,43 .*card_label="PugPal Cam,' /usr/lib/modprobe.d/99-pugpal-v4l2loopback.conf
+check "pugcam state dir on /var (wheel-writable)" grep -qx "d /var/lib/pugcam 0775 root wheel -" /usr/lib/tmpfiles.d/pugpal-pugcam.conf
+
 echo "== /opt is a real directory with the /opt apps in it"
 check "/opt is not a symlink"          test ! -L /opt
 check "chrome binary"                  test -x /opt/google/chrome/chrome

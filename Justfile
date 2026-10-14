@@ -102,6 +102,9 @@ build $target_image=image_name $tag=default_tag:
     # Bust the layer cache when build_files/ or system_files/ change (see Containerfile).
     CTX_HASH=$(tar --sort=name --mtime=@0 --owner=0 --group=0 -cf - build_files system_files | sha256sum | cut -c1-16)
     BUILD_ARGS+=("--build-arg" "CTX_HASH=${CTX_HASH}")
+    # Kernel modules (v4l2loopback) from ublue's akmods, built for the base image's exact kernel.
+    KERNEL=$(skopeo inspect docker://ghcr.io/ublue-os/silverblue-main:44 | jq -r '.Labels["ostree.linux"]')
+    BUILD_ARGS+=("--build-arg" "AKMODS_IMAGE=ghcr.io/ublue-os/akmods:main-44-${KERNEL}")
     LABELS=()
     if [[ -z "$(git status -s)" ]]; then
         GIT_SHA=$(git rev-parse --short HEAD)

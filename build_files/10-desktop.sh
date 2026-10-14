@@ -17,6 +17,13 @@ dnf5 -y install \
     xdg-desktop-portal-hyprland \
     uwsm
 
+# Virtual cameras (v4l2loopback, prebuilt for this kernel in the akmods stage):
+# "PugPal Cam" for the dotfiles' pugcam (GPU framing + background blur) and
+# one for OBS. Devices: /usr/lib/modprobe.d/99-pugpal-v4l2loopback.conf.
+dnf5 -y install \
+    /rpms/akmods/common/v4l2loopback-*.rpm \
+    /rpms/akmods/kmods/kmod-v4l2loopback-*.rpm
+
 dnf5 -y install \
     waybar \
     mako \

@@ -1,3 +1,9 @@
+# v4l2loopback (virtual cameras) comes prebuilt from Universal Blue's akmods,
+# which only fits one exact kernel: the Justfile passes the tag matching the
+# base image's kernel. (The default floats; dnf fails loudly on a mismatch.)
+ARG AKMODS_IMAGE=ghcr.io/ublue-os/akmods:main-44
+FROM ${AKMODS_IMAGE} AS akmods
+
 # Allow build scripts to be referenced without being copied into the final image
 FROM scratch AS ctx
 COPY build_files /
@@ -59,6 +65,7 @@ ARG CTX_HASH=unset
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=bind,from=quickshell-builder,source=/out,target=/rpms/quickshell \
     --mount=type=bind,from=whisper-builder,source=/out,target=/bins/whisper \
+    --mount=type=bind,from=akmods,source=/rpms,target=/rpms/akmods \
     --mount=type=cache,dst=/var/cache \
     --mount=type=cache,dst=/var/log \
     --mount=type=tmpfs,dst=/tmp \
