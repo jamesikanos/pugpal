@@ -22,6 +22,7 @@ for p in hyprland hyprlock hypridle xdg-desktop-portal-hyprland uwsm waybar kitt
 done
 check "no system wine (Lutris uses GE-Proton runners)" bash -c '! rpm -q wine-core'
 check "no quickshell debuginfo" bash -c '! rpm -q quickshell-debuginfo && ! rpm -q quickshell-debugsource'
+check "no nodejs22-docs" bash -c '! rpm -q nodejs22-docs'
 for p in dms dms-cli dgop matugen ibm-plex-sans-fonts ibm-plex-mono-fonts; do check "$p" rpm -q "$p"; done
 check "quickshell is PugPal's own build" bash -c 'rpm -q --qf "%{RELEASE}" quickshell | grep -q pugpal'
 check "LSP LADSPA plugins (PodMic Tuned filter-chain)" test -f /usr/lib64/ladspa/lsp-plugins-ladspa.so

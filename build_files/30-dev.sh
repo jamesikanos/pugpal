@@ -32,6 +32,12 @@ dnf5 -y install \
     kubernetes1.35-client \
     azure-cli
 
+# nodejs22 and nodejs22-npm recommend Node's HTML docs (52 MB), and Node
+# already arrives as a weak dep of the install above, so an --exclude here is
+# too late - remove them instead (nothing requires them). full-i18n stays:
+# without it Intl formats every locale as English.
+dnf5 -y remove nodejs22-docs
+
 # minikube isn't in Fedora; the old install used the upstream RPM. Pinned,
 # checksum-verified.
 minikube_ver=1.38.1
