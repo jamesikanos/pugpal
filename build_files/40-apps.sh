@@ -20,11 +20,12 @@ for spec in onepassword:1500 onepassword-cli:1501 onepassword-mcp:1502; do
     [[ "$(getent group "$name" | cut -d: -f3)" == "$gid" ]]
 done
 
+# CoolerControl: the daemon only. Its desktop app is a Qt WebEngine wrapper
+# (~300 MB) around the web UI the daemon already serves on localhost:11987.
 dnf5 -y install \
     google-chrome-stable \
     1password \
     1password-cli \
-    coolercontrol \
     coolercontrold \
     obs-studio \
     lm_sensors \
