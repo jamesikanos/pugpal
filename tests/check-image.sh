@@ -21,6 +21,7 @@ for p in hyprland hyprlock hypridle xdg-desktop-portal-hyprland uwsm waybar kitt
     check "$p" rpm -q "$p"
 done
 check "no system wine (Lutris uses GE-Proton runners)" bash -c '! rpm -q wine-core'
+check "no Firefox (Chrome is the browser)" bash -c '! rpm -q firefox'
 check "no quickshell debuginfo" bash -c '! rpm -q quickshell-debuginfo && ! rpm -q quickshell-debugsource'
 check "no nodejs22-docs" bash -c '! rpm -q nodejs22-docs'
 for p in dms dms-cli dgop matugen ibm-plex-sans-fonts ibm-plex-mono-fonts; do check "$p" rpm -q "$p"; done

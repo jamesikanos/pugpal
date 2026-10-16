@@ -33,6 +33,10 @@ dnf5 -y install \
     kdump-utils \
     makedumpfile            # PodMic Tuned's LADSPA plugins; kdump (freeze-diagnosis kit; kdump.service is in kdump-utils since F40)
 
+# Firefox comes with the ublue base (~356 MB with langpacks). Chrome is the
+# browser here; Firefox is a Flatpak away if ever needed.
+dnf5 -y remove firefox firefox-langpacks
+
 # ProtonVPN. proton-vpn-daemon's %posttrans ends with `systemctl start`, which
 # can never succeed in a container build and fails the whole transaction.
 # Install its dependencies normally, then the daemon alone with scriptlets off
