@@ -25,7 +25,6 @@ dnf5 -y install \
     qpdf \
     python3-img2pdf \
     tesseract \
-    unoconv \
     v4l-utils \
     uvcdynctrl \
     rocminfo \
