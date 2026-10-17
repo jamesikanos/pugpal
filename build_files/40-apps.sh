@@ -20,11 +20,12 @@ for spec in onepassword:1500 onepassword-cli:1501 onepassword-mcp:1502; do
     [[ "$(getent group "$name" | cut -d: -f3)" == "$gid" ]]
 done
 
+# CoolerControl: the daemon only. Its desktop app is a Qt WebEngine wrapper
+# (~300 MB) around the web UI the daemon already serves on localhost:11987.
 dnf5 -y install \
     google-chrome-stable \
     1password \
     1password-cli \
-    coolercontrol \
     coolercontrold \
     obs-studio \
     lm_sensors \
@@ -32,6 +33,10 @@ dnf5 -y install \
     kexec-tools \
     kdump-utils \
     makedumpfile            # PodMic Tuned's LADSPA plugins; kdump (freeze-diagnosis kit; kdump.service is in kdump-utils since F40)
+
+# Firefox comes with the ublue base (~356 MB with langpacks). Chrome is the
+# browser here; Firefox is a Flatpak away if ever needed.
+dnf5 -y remove firefox firefox-langpacks
 
 # ProtonVPN. proton-vpn-daemon's %posttrans ends with `systemctl start`, which
 # can never succeed in a container build and fails the whole transaction.

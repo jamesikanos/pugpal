@@ -10,7 +10,9 @@ COPY build_files /
 COPY system_files /system_files
 
 # Build PugPal's Quickshell RPM from a pinned upstream commit, against the same
-# base (and so the same Qt) as the final image. Only the RPM is carried over.
+# base (and so the same Qt) as the final image. Only the RPM is carried over -
+# not the -debuginfo/-debugsource subpackages (~140 MB), hence [0-9]: the
+# version right after the name.
 FROM ghcr.io/ublue-os/silverblue-main:44 AS quickshell-builder
 COPY build_files/quickshell/quickshell.spec /tmp/quickshell.spec
 RUN --mount=type=cache,dst=/var/cache \
@@ -20,7 +22,7 @@ RUN --mount=type=cache,dst=/var/cache \
     rpmbuild -bb --undefine=_disable_source_fetch \
         --define "_topdir /rpmbuild" --define "_sourcedir /rpmbuild/SOURCES" \
         /tmp/quickshell.spec && \
-    mkdir -p /out && cp /rpmbuild/RPMS/*/quickshell-*.rpm /out/
+    mkdir -p /out && cp /rpmbuild/RPMS/*/quickshell-[0-9]*.rpm /out/
 
 # whisper.cpp's whisper-cli with the Vulkan backend: GPU speech-to-text for
 # pugrec's transcripts (AMD via RADV, no ROCm/CUDA). Not packaged in Fedora.

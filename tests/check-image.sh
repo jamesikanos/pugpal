@@ -17,10 +17,14 @@ for p in hyprland hyprlock hypridle xdg-desktop-portal-hyprland uwsm waybar kitt
          gnome-shell gdm \
          lutris steam gamescope gamemode mangohud vulkan-loader.i686 mesa-vulkan-drivers.i686 protonplus \
          docker-ce docker-compose-plugin docker-buildx-plugin code libvirt-daemon-kvm virt-manager neovim gh scrcpy \
-         google-chrome-stable 1password 1password-cli coolercontrol coolercontrold obs-studio proton-vpn-gnome-desktop; do
+         google-chrome-stable 1password 1password-cli coolercontrold obs-studio proton-vpn-gnome-desktop; do
     check "$p" rpm -q "$p"
 done
 check "no system wine (Lutris uses GE-Proton runners)" bash -c '! rpm -q wine-core'
+check "no Firefox (Chrome is the browser)" bash -c '! rpm -q firefox'
+check "no quickshell debuginfo" bash -c '! rpm -q quickshell-debuginfo && ! rpm -q quickshell-debugsource'
+check "no nodejs22-docs" bash -c '! rpm -q nodejs22-docs'
+check "no CoolerControl GUI (web UI on :11987)" bash -c '! rpm -q coolercontrol && ! rpm -q qt6-qtwebengine'
 for p in dms dms-cli dgop matugen ibm-plex-sans-fonts ibm-plex-mono-fonts; do check "$p" rpm -q "$p"; done
 check "quickshell is PugPal's own build" bash -c 'rpm -q --qf "%{RELEASE}" quickshell | grep -q pugpal'
 check "LSP LADSPA plugins (PodMic Tuned filter-chain)" test -f /usr/lib64/ladspa/lsp-plugins-ladspa.so
