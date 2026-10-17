@@ -20,6 +20,7 @@ for p in hyprland hyprlock hypridle xdg-desktop-portal-hyprland uwsm waybar kitt
          google-chrome-stable 1password 1password-cli coolercontrold obs-studio proton-vpn-gnome-desktop; do
     check "$p" rpm -q "$p"
 done
+check "no kernel-devel (bcc uses kheaders; it never matched the kernel anyway)" bash -c '! rpm -q kernel-devel'
 check "no system wine (Lutris uses GE-Proton runners)" bash -c '! rpm -q wine-core'
 check "no Firefox (Chrome is the browser)" bash -c '! rpm -q firefox'
 check "no quickshell debuginfo" bash -c '! rpm -q quickshell-debuginfo && ! rpm -q quickshell-debugsource'
@@ -75,6 +76,7 @@ check "inotify limit raised for minikube docker-driver clusters" grep -qE "^fs.i
 check "no machine-specific kargs in the image (they're in machine profiles)" bash -c '! ls /usr/lib/bootc/kargs.d/ 2>/dev/null | grep -q pugpal'
 check "freeze kit: lockup panics" grep -q "kernel.softlockup_panic *= *1" /usr/lib/sysctl.d/61-pugpal-freeze-capture.conf
 check "freeze kit: watchdog" grep -q "RuntimeWatchdogSec=120" /usr/lib/systemd/system.conf.d/99-pugpal-watchdog.conf
+check "image updates staged weekly (Sunday 04:00), not daily" bash -c 'd=/usr/lib/systemd/system/rpm-ostreed-automatic.timer.d; [[ $(ls $d | tail -1) == zz-pugpal-weekly.conf ]] && grep -qx "OnCalendar=" $d/zz-pugpal-weekly.conf && grep -qx "OnCalendar=Sun \*-\*-\* 04:00:00" $d/zz-pugpal-weekly.conf'
 check "kdump skipped without a crashkernel karg" grep -qx "ConditionKernelCommandLine=crashkernel" /usr/lib/systemd/system/kdump.service.d/pugpal.conf
 check "first-boot setup parses" python3 -c 'import ast; ast.parse(open("/usr/libexec/pugpal-setup").read())'
 check "first-boot setup runs" /usr/libexec/pugpal-setup --help

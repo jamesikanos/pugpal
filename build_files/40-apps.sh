@@ -43,7 +43,11 @@ dnf5 -y remove firefox firefox-langpacks
 # Install its dependencies normally, then the daemon alone with scriptlets off
 # (that posttrans is its only scriptlet: daemon-reload/enable/start), and
 # enable its split-tunneling service in 90-cleanup.sh instead.
-dnf5 -y install \
+# Weak deps off: python3-bcc recommends kernel-devel, bcc-tools, compiler-rt21
+# and libomp21 (~280 MB). kernel-devel is the newest release, not the image's
+# kernel, so its headers never match; bcc falls back to the kernel's own
+# kheaders module. It also re-downloaded 238 MB with every kernel bump.
+dnf5 -y install --setopt=install_weak_deps=False \
     python3-bcc \
     python3-dbus-fast \
     python3-packaging \
