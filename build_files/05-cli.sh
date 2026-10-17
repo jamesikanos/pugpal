@@ -3,7 +3,8 @@
 # the old Fedora (dnf repoquery --userinstalled vs this image).
 # zsh is James's LOGIN SHELL - without it the account can't log in after
 # `bootc switch`. oh-my-zsh, .zshrc and plugins live in /home and carry over.
-# git: not in the ublue base, and the dotfiles install needs it.
+# git: not in the ublue base, and the dotfiles install needs it. git-lfs: the
+# LFS filters in ~/.gitconfig are `required`, so LFS repos fail without it.
 # NetworkManager-tui: nmtui, for Wi-Fi in the text-mode first-boot setup.
 # restic: snapshot backups of the home disk (the job itself is per-machine, in
 # the dotfiles' machine profile).
@@ -13,6 +14,7 @@ set -euxo pipefail
 dnf5 -y install \
     zsh \
     git \
+    git-lfs \
     NetworkManager-tui \
     fastfetch \
     bat \
@@ -25,7 +27,6 @@ dnf5 -y install \
     qpdf \
     python3-img2pdf \
     tesseract \
-    unoconv \
     v4l-utils \
     uvcdynctrl \
     rocminfo \
