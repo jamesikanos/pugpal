@@ -3,12 +3,15 @@
 # uses Qt private APIs, so it must be rebuilt whenever Qt changes; the daily CI
 # build does that). Adapted from AvengeMedia/danklinux's quickshell-git.spec.
 #
-# Bump: change `commit` (Renovate opens PRs for it), keep `tag` at the latest
-# upstream release tag.
+# Follows upstream releases: Renovate opens a PR when a new tag appears and
+# updates `uptag` and `commit` together (the tag's commit, so the build stays
+# pinned even if a tag were moved). To take an unreleased fix, set `commit` to
+# it by hand and leave `uptag` at the release it follows.
 
-# renovate: datasource=git-refs depName=https://github.com/quickshell-mirror/quickshell currentValue=master
+# renovate: datasource=github-tags depName=quickshell-mirror/quickshell
+%global uptag       v0.3.2
 %global commit      4f508be500dea6e5732cc3d50382a0048b17e7b1
-%global tag         0.3.2
+%global tag         %(t=%{uptag}; echo ${t#v})
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
 Name:               quickshell
