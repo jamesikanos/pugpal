@@ -20,16 +20,28 @@
     },
   ],
 
+  // Renovate's scope is Quickshell (above) and cosign; everything else is
+  // handled elsewhere or on purpose.
   "packageRules": [
     {
-      "automerge": true,
-      "matchUpdateTypes": ["pin", "pinDigest"]
+      // Containerfile base images: the silverblue-main tag IS the Fedora
+      // release (a deliberate, VM-tested bump - see CLAUDE.md "Version bumps"),
+      // the akmods tag follows the base kernel via the Justfile, and pinning
+      // digests would stop the daily build picking up Fedora updates.
+      "matchManagers": ["dockerfile"],
+      "enabled": false,
     },
     {
+      // GitHub Actions: Dependabot (.github/dependabot.yml) already bumps these.
+      "matchManagers": ["github-actions"],
       "enabled": false,
-      "matchUpdateTypes": ["digest", "pinDigest", "pin"],
-      "matchDepTypes": ["container"],
-      "matchFileNames": [".github/workflows/**.yaml", ".github/workflows/**.yml"],
+    },
+    {
+      // ...except build.yml's `cosign-release` input, which Dependabot can't
+      // see. Majors change the signing format: review those with care.
+      "matchManagers": ["github-actions"],
+      "matchDepNames": ["sigstore/cosign"],
+      "enabled": true,
     },
   ]
 }
