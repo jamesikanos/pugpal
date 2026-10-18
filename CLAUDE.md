@@ -24,7 +24,7 @@ in the gitignored `local/machine.md`.
 | ublue `image-template` (Containerfile + shell) | Universal Blue's recommended path. No abstraction layer over plain podman/dnf; BlueBuild was considered and rejected for that reason. |
 | Hyprland from COPR `sdegler/hyprland` | Fedora's repos have no Hyprland. sdegler's is the maintained successor to solopasha's (which stopped at F43) and builds F44/F45. |
 | Shell: **DankMaterialShell** on **Quickshell** | One QML shell (bar, launcher, notifications, lock screen, OSDs, polkit agent) themed from one palette. DMS chosen over Caelestia/end-4: official Fedora packaging, most complete, built to be themed. (Noctalia left Quickshell in 2026.) |
-| Quickshell built **from a pinned upstream commit** | James wants it bleeding-edge without waiting on a COPR. Built as our own RPM in the `quickshell-builder` stage against the image's exact Qt (it uses Qt private APIs; the daily build rebuilds it on every Qt update). Renovate proposes commit bumps. |
+| Quickshell built **from upstream release tags**, pinned to the tag's commit | Our own build, not a COPR's. Built as our own RPM in the `quickshell-builder` stage against the image's exact Qt (it uses Qt private APIs; the daily build rebuilds it on every Qt update). Renovate proposes a PR per upstream release (every 1-4 months); an unreleased fix can still be taken by setting `commit` by hand. Was master-tracking until 2026-10-18 (too many bump PRs for no felt benefit). |
 | Hyprland pinned to `0.56*` | Hyprland changes config format/semantics between minors (0.56 already generates `~/.config/hypr/hyprland.lua` - the Lua config is here, not upcoming). Bump only after the user config is checked against the new version. |
 | Lutris as an **RPM**, not Flatpak | The Flatpak keeps data under `~/.var/app`; the RPM keeps the existing `~/.config/lutris`, `~/.local/share/lutris/runners` (GE-Proton) and the WoW prefix in `~/Games` working untouched. |
 | Steam from negativo17 `fedora-steam` | The base ships negativo17 multimedia and **no RPM Fusion** (the template's comment claiming otherwise is stale). One vendor, no codec-stack mixing. |
@@ -323,8 +323,8 @@ PugPal is a personal project, not a FieldPal product.
   `display-manager.service` (a symlink in `/etc`) follows the new image and
   GDM's leftovers (`/var/lib/gdm`, dconf) are harmless.
 - **Renovate app**: `.github/renovate.json5` has a custom manager for the
-  Quickshell commit pin, but Renovate only runs once the Renovate GitHub app is
-  installed on the repo (James's action). Until then, bump `commit` by hand.
+  Quickshell release pin, but Renovate only runs once the Renovate GitHub app is
+  installed on the repo (James's action). Until then, bump `uptag` + `commit` by hand.
 - **Ship a default look for new users** (`/etc/skel`, or a `ujust pugpal-look`
   recipe that applies the dotfiles). Today the look lives only in the private
   dotfiles repo and is applied by hand.
