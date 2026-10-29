@@ -5,10 +5,12 @@
 
 set -euxo pipefail
 
-# Hyprland is pinned to the 0.56 series: upstream is moving the config format
-# to Lua. Bump deliberately, after the config is migrated (see CLAUDE.md).
+# Hyprland is pinned to the 0.57 series: minors change config semantics, so
+# bump deliberately, after the user config is checked (see CLAUDE.md). The
+# COPR keeps only its newest build, so a new minor upstream fails the build
+# here until the pin is bumped - that's the reminder.
 dnf5 -y install \
-    'hyprland-0.56*' \
+    'hyprland-0.57*' \
     hyprlock \
     hypridle \
     hyprpaper \
