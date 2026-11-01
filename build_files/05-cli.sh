@@ -6,6 +6,8 @@
 # git: not in the ublue base, and the dotfiles install needs it. git-lfs: the
 # LFS filters in ~/.gitconfig are `required`, so LFS repos fail without it.
 # NetworkManager-tui: nmtui, for Wi-Fi in the text-mode first-boot setup.
+# mat2: strips author/edit-history metadata from Office/ODF docs, PDFs and
+# images (the dotfiles' /clean-metadata skill wraps it).
 # restic: snapshot backups of the home disk (the job itself is per-machine, in
 # the dotfiles' machine profile).
 
@@ -26,6 +28,7 @@ dnf5 -y install \
     python3-pip \
     qpdf \
     python3-img2pdf \
+    mat2 \
     tesseract \
     v4l-utils \
     uvcdynctrl \

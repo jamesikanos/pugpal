@@ -37,7 +37,7 @@ check "zsh at /bin/zsh (James's login shell)" test -x /bin/zsh
 check "whisper-cli runs (pugrec transcripts)" bash -c 'whisper-cli --help 2>&1 | grep -q usage'
 check "whisper-cli has the Vulkan backend" bash -c 'ldd /usr/bin/whisper-cli | grep -q libvulkan'
 check "deep-filter runs (pugrec audio clean-up)" deep-filter --version
-check "hyprland pinned to 0.56" bash -c 'rpm -q --qf "%{VERSION}" hyprland | grep -q "^0\.56"'
+check "hyprland pinned to 0.57" bash -c 'rpm -q --qf "%{VERSION}" hyprland | grep -q "^0\.57"'
 
 echo "== virtual cameras"
 check "v4l2loopback module for the image's kernel" bash -c 'modinfo -k "$(ls /usr/lib/modules | head -1)" v4l2loopback'
