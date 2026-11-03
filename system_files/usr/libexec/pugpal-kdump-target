@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Give kdump an explicit dump target on a bootc/ostree install whose root is a
+# plain btrfs filesystem (no subvolumes), i.e. `bootc install to-disk --filesystem btrfs`.
+#
+# Why: with no target in /etc/kdump.conf, kdump-utils (1.0.61) works out where
+# `path /var/crash` lives by looking for the mount of the btrfs top level, whose
+# findmnt SOURCE it expects to end in "[/]". findmnt never prints "[/]" (the top
+# level is shown as the bare device, e.g. /sysroot -> /dev/<disk>), so it falls
+# back to the device's first mount, /etc, builds "/etcostree/deploy/default/var/crash",
+# finds no device for it and mkdumprd fails ("failed to make kdump initrd"). The
+# same lookup runs again in the dracut module. With an explicit "btrfs UUID=..."
+# target, both take the user-target path instead, which works: the kdump kernel
+# mounts the whole filesystem and writes to <fs>/ostree/deploy/default/var/crash,
+# which is /var/crash here.
+#
+# Run as kdump.service's ExecStartPre (kdump.service.d/pugpal.conf). Idempotent:
+# does nothing if a target is already configured or the layout is different.
+# kdumpctl notices the changed kdump.conf and rebuilds its initramfs.
+set -euo pipefail
+
+conf=${PUGPAL_KDUMP_CONF:-/etc/kdump.conf}   # override for testing only
+[[ -f $conf ]] || exit 0
+
+# A dump target is already set (by hand or by an earlier run): leave it alone.
+if grep -qE '^[[:space:]]*(ext[234]|xfs|btrfs|minix|raw|nfs|ssh|virtiofs)[[:space:]]' "$conf"; then
+    exit 0
+fi
+
+# Only the layout the bug hits: /sysroot is the btrfs top level, /var a bind mount inside it.
+[[ $(findmnt -n -o FSTYPE /sysroot 2>/dev/null) == btrfs ]] || exit 0
+[[ $(findmnt -n -o FSROOT /sysroot) == / ]] || exit 0
+uuid=$(findmnt -n -o UUID /sysroot)
+varroot=$(findmnt -n -o FSROOT /var)          # /ostree/deploy/default/var
+[[ -n $uuid && $varroot == /ostree/* ]] || exit 0
+
+# kdump's own path (default /var/crash), translated to a path inside the filesystem.
+path=$(awk '$1 == "path" { print $2 }' "$conf" | tail -1)
+path=${path:-/var/crash}
+[[ $path == /var/* ]] || { echo "pugpal-kdump-target: path $path is outside /var, not touching $conf"; exit 0; }
+fspath=$varroot${path#/var}
+mkdir -p "$path"
+
+[[ -e $conf.pre-pugpal ]] || cp -p "$conf" "$conf.pre-pugpal"
+tmp=$(mktemp "$conf.XXXXXX")
+{
+    grep -vE '^[[:space:]]*path[[:space:]]' "$conf"
+    echo
+    echo "# Added by /usr/libexec/pugpal-kdump-target: kdump-utils can't find /var/crash's"
+    echo "# device on a plain-btrfs ostree root by itself. $fspath is $path."
+    echo "btrfs UUID=$uuid"
+    echo "path $fspath"
+} > "$tmp"
+chmod --reference="$conf" "$tmp"
+mv "$tmp" "$conf"
+restorecon "$conf" >/dev/null 2>&1 || true
+echo "pugpal-kdump-target: set dump target btrfs UUID=$uuid, path $fspath ($path) in $conf"
