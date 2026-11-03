@@ -59,7 +59,7 @@ system_files/            copied over / at build time
   usr/libexec/pugpal-kdump-target  kdump.service ExecStartPre: explicit dump target on a plain-btrfs root (kdump-utils bug, see 2026-11-03)
   usr/lib/modprobe.d/99-pugpal-v4l2loopback.conf  virtual cameras: /dev/video42 "PugPal Cam" (dotfiles' pugcam), /dev/video43 OBS
   usr/lib/tmpfiles.d/pugpal-pugcam.conf  /var/lib/pugcam (wheel-writable): pugcam's PyTorch venv + models, off /home
-  usr/lib/systemd/system/rpm-ostreed-automatic.timer.d/zz-pugpal-weekly.conf  image updates staged weekly (Sun ~04:00), not daily
+  usr/lib/systemd/system/rpm-ostreed-automatic.timer.d/zz-pugpal-schedule.conf  image updates staged twice a week (Wed + Sun ~04:00), not daily
 scripts/install-to-disk.sh  `just install-disk`: bootc install to an external USB disk (picker, serial confirm, --dry-run);
                          `--internal machine.toml`: the profile's root disk only, never its home disk (migration)
 scripts/vm-console.py    screenshots + typing on the test VM's screen via the QEMU monitor (vm/monitor.sock)
@@ -145,7 +145,7 @@ On an installed machine:
 
 ```bash
 sudo bootc switch ghcr.io/jamesikanos/pugpal:latest   # first time
-sudo bootc upgrade && systemctl reboot                # updates (also staged automatically, Sundays ~04:00)
+sudo bootc upgrade && systemctl reboot                # updates (also staged automatically, Wed + Sun ~04:00)
 sudo bootc rollback                                   # previous deployment
 bootc status
 ```
