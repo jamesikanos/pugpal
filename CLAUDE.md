@@ -56,6 +56,7 @@ system_files/            copied over / at build time
   usr/libexec/pugpal-groups + pugpal-groups.service   wheel users -> docker, libvirt; applies changed fixed GIDs
   usr/libexec/pugpal-setup + pugpal-firstboot.service  first-boot setup on tty1 (see "First boot"); `ujust pugpal-machine`
   usr/bin/vitals-record + vitals-recorder.{service,timer}  30s vitals log for freeze diagnosis
+  usr/libexec/pugpal-kdump-target  kdump.service ExecStartPre: explicit dump target on a plain-btrfs root (kdump-utils bug, see 2026-11-03)
   usr/lib/modprobe.d/99-pugpal-v4l2loopback.conf  virtual cameras: /dev/video42 "PugPal Cam" (dotfiles' pugcam), /dev/video43 OBS
   usr/lib/tmpfiles.d/pugpal-pugcam.conf  /var/lib/pugcam (wheel-writable): pugcam's PyTorch venv + models, off /home
   usr/lib/systemd/system/rpm-ostreed-automatic.timer.d/zz-pugpal-weekly.conf  image updates staged weekly (Sun ~04:00), not daily
@@ -346,6 +347,20 @@ PugPal is a personal project, not a FieldPal product.
 ## Troubleshooting log
 
 Dated entries, newest first. What broke, why, what fixed it.
+
+- **2026-11-03** - **kdump never armed on installed machines** (`mkdumprd: failed to make
+  kdump initrd` on every boot since crashkernel was set). kdump-utils 1.0.61, with no target
+  in `/etc/kdump.conf`, finds `/var/crash`'s device by looking for the btrfs top-level mount
+  whose findmnt SOURCE ends in `[/]`; findmnt prints the top level (`/sysroot` on a
+  `bootc install --filesystem btrfs` disk) as the bare device, so it falls back to the
+  device's first mount (`/etc`) and builds `/etcostree/deploy/default/var/crash`. The dracut
+  module repeats the lookup. Fix: `pugpal-kdump-target` (ExecStartPre) writes an explicit
+  `btrfs UUID=<root>` + `path /ostree/deploy/default/var/crash` once; that takes kdump's
+  user-target path, which works. Verified by building the kdump initramfs rootless in a
+  user+mount namespace with the edited config bind-mounted over `/etc/kdump.conf`
+  (`unshare -rm`): its baked-in kdump.conf and fstab mount the root fs and write to
+  `/var/crash`'s real location. Not yet verified with a real crash (`echo c >
+  /proc/sysrq-trigger`).
 
 - **2026-10-29** - **Daily build failed: `No match for argument: hyprland-0.56*`.**
   Hyprland 0.57.0 shipped 2026-10-28 and the `sdegler/hyprland` COPR serves
