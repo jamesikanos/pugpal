@@ -24,11 +24,22 @@ fi
 # podman's `until` means *created* before $age (Docker's means unused), so a
 # base image pulled >7 days ago is re-pulled on the next build. Images backing
 # an existing container (distrobox/toolbox) count as in use and stay.
+# A build that dies midway leaves buildah "working containers" (podman ps
+# --external), which pin their images so prune can't reclaim them (2026-11:
+# 13 of them held ~23 GB). Remove those older than $age first; podman's own
+# containers (distrobox/toolbox) are left alone.
 if command -v podman >/dev/null; then
     while IFS=: read -r user _ uid _ _ home _; do
         [[ $uid -ge 1000 && $uid -lt 60000 && -d $home/.local/share/containers ]] || continue
         echo "== podman ($user) before"
         runuser -u "$user" -- podman system df
+        if command -v buildah >/dev/null; then
+            runuser -u "$user" -- podman ps -a --external --filter "until=${age}" --format '{{.ID}} {{.Names}}' |
+                while read -r id name; do
+                    runuser -u "$user" -- podman container exists "$id" && continue
+                    runuser -u "$user" -- buildah rm "$id" >/dev/null && echo "removed leftover build container $name"
+                done
+        fi
         runuser -u "$user" -- podman system prune --all --force --filter "until=${age}"
         echo "== podman ($user) after"
         runuser -u "$user" -- podman system df
